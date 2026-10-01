@@ -1,5 +1,4 @@
-<!doctype html><html lang="pt-PT"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>Beatriz Machado Studio</title><meta name="description" content="Beatriz Machado — Web Design & Brand Identity. Websites, landing pages, rebranding e identidade visual para marcas que querem uma presença profissional."><meta property="og:title" content="Beatriz Machado Studio — Web Design & Brand Identity"><meta property="og:description" content="Beatriz Machado — Web Design & Brand Identity. Websites, landing pages, rebranding e identidade visual para marcas que querem uma presença profissional."><meta property="og:type" content="website"><meta name="theme-color" content="#FDFCF9"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23FDFCF9'/%3E%3Crect x='6' y='6' width='52' height='52' fill='none' stroke='%23B8860B' stroke-width='2'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial' font-weight='700' font-size='20' fill='%23B8860B'%3EBM%3C/text%3E%3C/svg%3E"></head><body>
-<link id="fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,200..800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!doctype html><html lang="pt-PT"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>Beatriz Machado Studio</title><meta name="description" content="Beatriz Machado — Web Design & Brand Identity. Websites, landing pages, rebranding e identidade visual para marcas que querem uma presença profissional."><meta property="og:title" content="Beatriz Machado Studio — Web Design & Brand Identity"><meta property="og:description" content="Beatriz Machado — Web Design & Brand Identity. Websites, landing pages, rebranding e identidade visual para marcas que querem uma presença profissional."><meta property="og:type" content="website"><meta name="theme-color" content="#FDFCF9"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23FDFCF9'/%3E%3Crect x='6' y='6' width='52' height='52' fill='none' stroke='%23B8860B' stroke-width='2'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial' font-weight='700' font-size='20' fill='%23B8860B'%3EBM%3C/text%3E%3C/svg%3E"></head><body><link id="fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,200..800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style id="css">
 /* Layout: editorial portfolio on off-white. Thin gold rules, large type, generous whitespace, square-cornered cards. */
 :root{
@@ -779,6 +778,15 @@ document.addEventListener("change",function(e){var el=e.target;
   if(el.dataset&&el.dataset.xs!=null){var i=+el.dataset.xs,j=+el.dataset.xj;cardSel[i]=cardSel[i]||{};if(el.checked)cardSel[i][j]=cardSel[i][j]||1;else delete cardSel[i][j];refreshCard(i);return;}
   if(el.form&&el.form.id==="qform"&&el.name==="servico"){var k=svcIndexFromOption(el.value);qDraft.cfg={svc:k,x:k==="maint"?{}:JSON.parse(JSON.stringify(cardSel[k]||{}))};syncSum();}
 });
+
+/* ---- send a request: admin panel database (/api/lead) + Netlify Forms (email alerts) ---- */
+function sendLead(form,r){
+  if(form==="design-partner"&&S.plans&&S.plans.partner){r=Object.assign({servico:S.plans.partner.name+" — "+S.plans.partner.sub,total:S.plans.partner.price},r);}
+  var post=function(url,opts){return fetch(url,opts).then(function(res){if(!res.ok)throw new Error(res.status);return true;});};
+  var toApi=post("/api/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({type:form},r))});
+  var toForms=post("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams(Object.assign({"form-name":form},r)).toString()});
+  return Promise.all([toApi.catch(function(){return false;}),toForms.catch(function(){return false;})]).then(function(res){if(!res[0]&&!res[1])throw new Error("send failed");return res;});
+}
 /* ---- Design Partner panel ---- */
 function renderDP(){
   var host=document.getElementById("dp-host");
@@ -829,8 +837,7 @@ document.addEventListener("submit",function(e){
   if(!ok){err.textContent="Falta preencher alguns campos.";return;}
   if(r["bot-field"]){dpSent=r;renderDP();return;}
   var btn=document.getElementById("dp-send");btn.disabled=true;var lbl=btn.querySelector("[data-k]");if(lbl)lbl.textContent="A enviar…";
-  fetch("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams(Object.assign({"form-name":"design-partner"},r)).toString()}).then(function(res){
-    if(!res.ok)throw new Error(res.status);dpSent=r;dpDraft={};renderDP();var dp=document.querySelector("#dp-host .dp");if(dp)dp.scrollTop=dp.scrollHeight;
+  sendLead("design-partner",r).then(function(){dpSent=r;dpDraft={};renderDP();var dp=document.querySelector("#dp-host .dp");if(dp)dp.scrollTop=dp.scrollHeight;
   }).catch(function(){btn.disabled=false;if(lbl)lbl.textContent=S.plans.partner.d.submit;
     err.innerHTML='Não foi possível enviar o pedido por aqui. <a href="'+waLink(dpSummary(r))+'" target="_blank" rel="noopener" style="text-decoration:underline;font-weight:600">Envia-o pelo WhatsApp</a>.';});
 });
@@ -851,9 +858,7 @@ document.addEventListener("submit",function(e){
     if(!ok){errEl.textContent="Falta preencher alguns campos.";return;}
   if(r["bot-field"]){quoteSent=r;render();return;}
   var btn=document.getElementById("q-send");btn.disabled=true;var lbl=btn.querySelector("[data-k]");if(lbl)lbl.textContent="A enviar…";
-  var body=new URLSearchParams(Object.assign({"form-name":"proposta"},r)).toString();
-  fetch("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body}).then(function(res){
-    if(!res.ok)throw new Error(res.status);quoteSent=r;qDraft={};render();var q=document.getElementById("proposta");if(q)q.scrollIntoView({behavior:"smooth",block:"start"});
+  sendLead("proposta",r).then(function(){quoteSent=r;qDraft={};render();var q=document.getElementById("proposta");if(q)q.scrollIntoView({behavior:"smooth",block:"start"});
   }).catch(function(){btn.disabled=false;if(lbl)lbl.textContent=S.proposal.submit;
     errEl.innerHTML='Não foi possível enviar o pedido por aqui. <a href="'+waLink(waSummary(r))+'" target="_blank" rel="noopener" style="text-decoration:underline;font-weight:600">Envia-o pelo WhatsApp</a>.';});
 });
@@ -928,5 +933,4 @@ if(window.claude&&typeof window.claude.use==="function"){
 }
 })();
 </script>
-
 </body></html>

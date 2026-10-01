@@ -1,14 +1,18 @@
-# Beatriz Machado — Portfólio
+# Beatriz Machado — Portfólio + Painel
 
-Portfólio de Web Design & Brand Identity.
+- `index.html` — o site.
+- `admin/index.html` — o painel privado (abre em `teusite.netlify.app/admin`).
+- `netlify/functions/lead.mjs` — recebe os pedidos de orçamento do site e guarda-os.
+- `netlify/functions/admin.mjs` — API privada do painel (protegida por palavra-passe).
+- `package.json` / `netlify.toml` — configuração do Netlify.
 
-- `index.html` — o site completo (textos, estilos e imagens estão todos neste ficheiro).
-- `netlify.toml` — configuração do Netlify.
+## Configurar a palavra-passe do painel (obrigatório, uma vez)
+Netlify → o teu site → Site configuration → Environment variables → Add a variable
+- Key: `ADMIN_PASSWORD`
+- Value: a tua palavra-passe (longa e só tua)
+Depois faz um novo deploy (Deploys → Trigger deploy).
 
-## Atualizar o site
-1. Edita o site no Claude ("Editar site" → "Guardar").
-2. Carrega em "Exportar HTML" e substitui o `index.html` deste repositório pelo novo ficheiro (renomeia para `index.html`).
-3. O Netlify publica a nova versão automaticamente.
-
-## Formulário
-O formulário "proposta" usa Netlify Forms. Os pedidos aparecem em Netlify → Forms.
+## Como funciona
+1. Um cliente pede orçamento no site.
+2. O pedido é guardado na base de dados do Netlify (Netlify Blobs) e aparece no painel.
+3. O Netlify Forms continua a enviar-te o aviso por email.
