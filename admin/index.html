@@ -300,7 +300,7 @@ function load(silent){
     st.data={leads:j.leads||[],clients:j.clients||[],projects:j.projects||[],users:j.users||[],notifs:N,testimonials:j.testimonials||[],invites:j.invites||[]};st.loading=false;
     if(silent&&st.drawer)renderTop();else render();
     if(fresh.length)alertNew(fresh);
-    setTitle();
+    setTitle();if(!silent||!st.status||!st.status.admin)checkStatus();
   }).catch(function(e){st.loading=false;
     if(silent&&e.status!==401){return;}
     st.key="";try{sessionStorage.removeItem("bm-admin-key");}catch(x){}
@@ -611,7 +611,7 @@ function viewDrawer(){
         '<div class="linkbox"><span style="flex:1">'+esc(inviteUrl(inv.token))+'</span><button class="btn btn-line btn-sm" data-a="copy-txt" data-txt="'+esc(inviteUrl(inv.token))+'">Copiar</button></div>'+
         '<label class="label" for="invmsg">Mensagem</label><textarea class="input" id="invmsg" rows="8">'+esc(msg)+'</textarea>'+
         '<div class="actions">'+(wn?'<a class="btn btn-wa" target="_blank" rel="noopener" href="https://wa.me/'+wn+'?text='+encodeURIComponent(msg)+'" id="invwa">'+WA_ICON+'Enviar pelo WhatsApp</a>':'<a class="btn btn-wa" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(msg)+'" id="invwa">'+WA_ICON+'Escolher contacto no WhatsApp</a>')+'<button class="btn btn-line btn-sm" data-a="copy-txt" data-txt="'+esc(msg)+'">Copiar mensagem</button></div>'+
-        '<p style="margin:0;font-size:13px;color:var(--muted)">Quando o cliente responder, recebes uma notificação e o testemunho aparece em “Por aprovar”.</p>';
+        '<p style="margin:0;font-size:13px;color:var(--muted)">Quando o cliente responder, recebes uma notificação e o testemunho aparece em “Por aprovar”.</p>'+(st.demo?'<div class="setup" style="margin:0"><b>Modo demonstração</b><span>Este link é só um exemplo e não abre no site. Os links verdadeiros são criados no painel real, em beatrizstudio.pt/admin.</span></div>':'');
     }
   }
   return '<div class="ov" data-ov="1"><aside class="drawer" role="dialog" aria-modal="true" aria-label="Detalhe">'+h+'</aside></div>';
