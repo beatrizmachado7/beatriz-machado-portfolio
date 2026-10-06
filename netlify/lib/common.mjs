@@ -74,7 +74,7 @@ export async function sendMail({ to, subject, html, text, replyTo }) {
     const r = await fetch(env("MAIL_API_URL") || "https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: "Bearer " + env("RESEND_API_KEY"), "content-type": "application/json" },
-      body: JSON.stringify({ from: env("MAIL_FROM"), to: [to], subject, html, text, reply_to: replyTo || undefined })
+      body: JSON.stringify({ from: env("MAIL_FROM"), to: [to], subject, html, text, reply_to: replyTo || env("REPLY_TO") || "beatrizmachadostudio@gmail.com" })
     });
     if (!r.ok) console.error("Resend", r.status, await r.text().catch(() => ""));
     return { ok: r.ok };

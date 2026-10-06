@@ -18,6 +18,7 @@ Project configuration → Environment variables → Add a variable. Depois de cr
 | `RESEND_API_KEY` | Enviar emails (códigos e avisos) | `re_...` (da conta Resend) |
 | `MAIL_FROM` | Remetente dos emails | `Beatriz Machado Studio <ola@beatrizstudio.pt>` |
 | `NOTIFY_EMAIL` | Onde recebes o aviso de cada pedido | o teu email pessoal |
+| `REPLY_TO` | Para onde vão as respostas aos emails automáticos (opcional) | `beatrizmachadostudio@gmail.com` (já é o valor por defeito) |
 | `SITE_URL` | Endereço do site nos emails (opcional) | `https://beatrizstudio.pt` |
 
 Sem `RESEND_API_KEY`/`MAIL_FROM`, o site continua a funcionar: as contas ficam ativas sem código e não são enviados emails.
@@ -40,3 +41,13 @@ Sem `RESEND_API_KEY`/`MAIL_FROM`, o site continua a funcionar: as contas ficam a
 3. O cliente escreve o testemunho, a pontuação e a foto/logótipo e autoriza a publicação.
 4. Recebes notificação (sino + email). Carregas em "Aprovar e publicar" e aparece no site (página inicial e página do projeto).
 - `netlify/functions/testimonials.mjs` — página do cliente e lista pública de testemunhos aprovados.
+
+## Google Analytics 4 (opcional)
+1. Em analytics.google.com cria uma propriedade "Beatriz Machado Studio" e um fluxo Web para https://beatrizstudio.pt.
+2. Copia o ID de medição (G-XXXXXXX) e envia-o à Claude. Fica guardado nos dados do site (`meta.ga4`).
+3. Com o ID definido, aparece o aviso de cookies. O Analytics só é carregado se o visitante aceitar.
+4. Eventos enviados: `cta_pedir_orcamento`, `whatsapp_click`, `form_step` e `generate_lead` (com o valor estimado em €).
+   No GA4, marca `generate_lead` como evento-chave (conversão).
+
+## Email de contacto
+O site mostra beatrizmachadostudio@gmail.com. Os emails automáticos saem de ola@beatrizstudio.pt (domínio verificado no Resend) e as respostas dos clientes vão para beatrizmachadostudio@gmail.com.

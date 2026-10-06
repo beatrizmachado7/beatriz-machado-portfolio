@@ -18,6 +18,18 @@ async function sendCode(user, code, kind) {
   return sendMail({ to: user.email, subject: `${code} · ${subject}`, html, text });
 }
 
+
+/* Pedidos enviados sem sessão com o mesmo email passam para a conta quando o email é confirmado. */
+async function claimLeads(s, user) {
+  const { blobs } = await s.list({ prefix: "eleads/" + sha(user.email) + "/" });
+  for (const b of blobs) {
+    const id = b.key.split("/").pop();
+    await s.setJSON("uleads/" + user.id + "/" + id, { at: new Date().toISOString() });
+    const lead = await s.get("leads/" + id, { type: "json" });
+    if (lead && !lead.userId) { lead.userId = user.id; await s.setJSON("leads/" + id, lead); }
+    await s.delete(b.key);
+  }
+}
 async function myLeads(s, user) {
   const { blobs } = await s.list({ prefix: "uleads/" + user.id + "/" });
   const leads = await Promise.all(blobs.map((b) => s.get("leads/" + b.key.split("/").pop(), { type: "json" })));
@@ -69,6 +81,7 @@ export default async (req) => {
       user.status = "active"; user.verifiedAt = new Date().toISOString();
       await s.setJSON(key, user);
       await notify(s, { type: "account", title: "Nova conta de cliente", sub: `${nome} · ${email}` });
+      await claimLeads(s, user);
       return json({ ok: true, token: await createSession(s, user), user: publicUser(user) });
     }
     const code = newCode();
@@ -100,6 +113,7 @@ export default async (req) => {
     delete user.code; user.status = "active"; user.verifiedAt = user.verifiedAt || new Date().toISOString();
     await s.setJSON(key, user);
     if (wasPending) await notify(s, { type: "account", title: "Nova conta de cliente", sub: `${user.nome} · ${user.email}` });
+    if (wasPending) await claimLeads(s, user);
     return json({ ok: true, token: await createSession(s, user), user: publicUser(user) });
   }
 

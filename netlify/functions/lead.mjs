@@ -1,7 +1,7 @@
 // Recebe os pedidos de orçamento do site (com ou sem conta) e guarda-os na base de dados (Netlify Blobs).
 // Proteção anti-spam invisível: campo armadilha, tempo mínimo de preenchimento e limite por IP.
 // Cria uma notificação no painel e envia um email à Beatriz (e ao cliente, se deixou email).
-import { json, clean, store, sessionUser, limited, notify, sendMail, mailLayout, p, rows, button, env, siteUrl, emailOk, phoneOk, ip } from "../lib/common.mjs";
+import { json, clean, sha, store, sessionUser, limited, notify, sendMail, mailLayout, p, rows, button, env, siteUrl, emailOk, phoneOk, ip } from "../lib/common.mjs";
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Método não permitido" }, 405);
@@ -41,6 +41,7 @@ export default async (req) => {
 
   await s.setJSON("leads/" + lead.id, lead);
   if (u) await s.setJSON("uleads/" + u.id + "/" + lead.id, { at: lead.createdAt });
+  else if (lead.email) await s.setJSON("eleads/" + sha(lead.email.toLowerCase()) + "/" + lead.id, { at: lead.createdAt });
   await notify(s, { type: "lead", title: "Novo pedido de orçamento", sub: `${lead.nome} · ${lead.servico.split(" — ")[0]}${lead.total ? " · " + lead.total : ""}`, leadId: lead.id });
 
   const site = siteUrl(req);
@@ -52,7 +53,7 @@ export default async (req) => {
       to: env("NOTIFY_EMAIL"), replyTo: lead.email || undefined,
       subject: `Novo pedido: ${lead.nome} · ${lead.servico.split(" — ")[0]}${lead.total ? " · " + lead.total : ""}`,
       html: mailLayout("Novo pedido de orçamento", details + button(site + "/admin/", "Abrir o painel")),
-      text: `Novo pedido de orçamento\n\n${lead.nome} (${lead.telefone}${lead.email ? ", " + lead.email : ""})\n${lead.servico}\n${lead.total}\nOrçamento: ${lead.orcamento}\nPrazo: ${lead.prazo}\n\n${lead.mensagem}\n\n${site}/admin/`
+      text: `Novo pedido de orçamento\n\n${lead.nome} (${lead.telefone}${lead.email ? ", " + lead.email : ""})\n${lead.servico}\n${lead.total}${lead.orcamento ? "\nOrçamento: " + lead.orcamento : ""}${lead.prazo ? "\nPrazo: " + lead.prazo : ""}\n\n${lead.mensagem}\n\n${site}/admin/`
     }));
   }
   if (lead.email) {
