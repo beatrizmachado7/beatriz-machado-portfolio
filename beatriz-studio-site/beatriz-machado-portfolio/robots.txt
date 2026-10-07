@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /conta/
+Disallow: /testemunho/
+
+Sitemap: https://beatrizstudio.pt/sitemap.xml
