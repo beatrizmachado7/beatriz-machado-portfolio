@@ -3,7 +3,42 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { json, env, store as getCrm, publicUser, newToken } from "../lib/common.mjs";
 
-const COLS = new Set(["leads", "clients", "projects"]);
+const COLS = new Set(["leads", "clients", "projects", "boards"]);
+
+// Cartões de tarefas semanais criados na primeira abertura do separador Tarefas.
+const T = (arr) => arr.map((t, i) => ({ id: "t" + (i + 1), t, done: false }));
+const DEFAULT_BOARDS = [
+  { id: "adriana-martins", order: 1, name: "Adriana Martins", sub: "Website e painel de marcações", items: T([
+    "Rever as duas demonstrações no telemóvel e no computador e anotar ajustes",
+    "Decidir se a foto do topo também fica completa no telemóvel",
+    "Enviar à Adriana a lista dos dados em falta",
+    "Escolher e comprar o domínio",
+    "Criar contas no GitHub e no Render e publicar uma versão de teste",
+    "Criar a conta da Adriana no painel e instalar o painel no telemóvel dela",
+    "Com o domínio ativo: criar o email, ligá-lo ao site e configurá-lo para não ir parar ao spam",
+    "Abrir os horários no painel e fazer uma marcação de teste completa",
+    "Pôr o link do formulário de registo nas redes e registar o site no Google"]) },
+  { id: "sf-damaiense", order: 2, name: "SF Damaiense", sub: "Preparação da reunião", items: T([
+    "Criar um protótipo para a reunião",
+    "Organizar o documento com o que vai ser falado na reunião"]) },
+  { id: "beatriz-studio", order: 3, name: "Beatriz Studio", sub: "O meu estúdio", items: T([
+    "Adicionar a lista de tarefas semanais ao painel",
+    "Logótipo",
+    "Gerir a página de Instagram e fazer publicações",
+    "Criar um documento a detalhar os serviços",
+    "Criar assinatura digital para os emails",
+    "Configurar o Claude para ler e separar emails"]) }
+];
+async function boards(store) {
+  let items = await list(store, "boards/");
+  if (!items.length && !(await store.get("meta/boards-seeded", { type: "json" }))) {
+    const now = new Date().toISOString();
+    items = DEFAULT_BOARDS.map((b) => ({ ...b, createdAt: now, updatedAt: now }));
+    await Promise.all(items.map((b) => store.setJSON("boards/" + b.id, b)));
+    await store.setJSON("meta/boards-seeded", { at: now });
+  }
+  return items.sort((a, b) => (a.order || 0) - (b.order || 0));
+}
 const hash = (s) => createHash("sha256").update(String(s)).digest();
 
 function authorised(req) {
@@ -30,14 +65,14 @@ export default async (req) => {
   const url = new URL(req.url);
 
   if (req.method === "GET") {
-    const [leads, clients, projects, users, notifs, testimonials, invites] = await Promise.all([
+    const [leads, clients, projects, users, notifs, testimonials, invites, boardList] = await Promise.all([
       list(store, "leads/"), list(store, "clients/"), list(store, "projects/"), list(store, "users/"), list(store, "notifs/", 60),
-      list(store, "testimonials/"), list(store, "invites/")
+      list(store, "testimonials/"), list(store, "invites/"), boards(store)
     ]);
     return json({
       leads: leads.sort(newest), clients: clients.sort(newest), projects: projects.sort(newest),
       users: users.filter((u) => u.status === "active").map(publicUser).sort(newest),
-      notifs: notifs.sort(newest), testimonials: testimonials.sort(newest), invites: invites.sort(newest)
+      notifs: notifs.sort(newest), testimonials: testimonials.sort(newest), invites: invites.sort(newest), boards: boardList
     });
   }
 
