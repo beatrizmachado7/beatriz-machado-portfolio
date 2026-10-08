@@ -84,12 +84,12 @@ export async function sendMail({ to, subject, html, text, replyTo }) {
   }
 }
 const escH = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-export function mailLayout(title, bodyHtml) {
+export function mailLayout(title, bodyHtml, sig) {
   return `<!doctype html><html><body style="margin:0;background:#F3EDE4;font-family:Helvetica,Arial,sans-serif;color:#1A1A1A">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EDE4;padding:32px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#FBF8F3;border:1px solid #DDD2C2;border-radius:22px">
 <tr><td style="padding:30px 34px 0;font-size:22px;font-weight:bold;letter-spacing:-0.5px;color:#1A1A1A">beatriz machado<span style="color:#C26A4A">.</span></td></tr>
-<tr><td style="padding:22px 34px 34px"><h1 style="font-size:22px;margin:0 0 16px;font-weight:600;line-height:1.25">${escH(title)}</h1>${bodyHtml}</td></tr>
+<tr><td style="padding:22px 34px 34px"><h1 style="font-size:22px;margin:0 0 16px;font-weight:600;line-height:1.25">${escH(title)}</h1>${bodyHtml}${sig ? signatureHtml(sig) : ""}</td></tr>
 </table><p style="font-size:11px;color:#5B534B;margin:16px 0 0">Websites · Identidade Visual · Redes Sociais · beatrizstudio.pt</p></td></tr></table></body></html>`;
 }
 export const mailText = (t) => String(t || "").split(/\n{2,}/).map((para) => `<p style="font-size:15px;line-height:1.6;margin:0 0 14px;color:#3A332D">${escH(para).replace(/\n/g, "<br>")}</p>`).join("");
@@ -104,3 +104,44 @@ export function rows(list) {
 export const button = (href, label) =>
   `<p style="margin:18px 0 4px"><a href="${escH(href)}" style="display:inline-block;background:#A65135;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:bold;padding:13px 22px;border-radius:999px">${escH(label)}</a></p>`;
 export const siteUrl = (req) => env("SITE_URL") || new URL(req.url).origin;
+
+/* ---------- Stripe (pagamentos) ---------- */
+export const stripeReady = () => !!env("STRIPE_SECRET_KEY");
+export async function stripe(path, params, method = "POST") {
+  const body = new URLSearchParams();
+  const add = (k, v) => { if (v === undefined || v === null || v === "") return; if (typeof v === "object") Object.entries(v).forEach(([kk, vv]) => add(k + "[" + kk + "]", vv)); else body.append(k, String(v)); };
+  Object.entries(params || {}).forEach(([k, v]) => add(k, v));
+  const r = await fetch((env("STRIPE_API_URL") || "https://api.stripe.com") + "/v1/" + path, {
+    method, headers: { authorization: "Bearer " + env("STRIPE_SECRET_KEY"), "content-type": "application/x-www-form-urlencoded" },
+    body: method === "GET" ? undefined : body
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { console.error("Stripe", r.status, j); const e = new Error((j.error && j.error.message) || "Erro do Stripe " + r.status); e.status = r.status; throw e; }
+  return j;
+}
+export const lisbonDate = (d = new Date()) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Lisbon" });
+
+/* ---------- assinatura dos emails ---------- */
+export const DEFAULT_SIG = { nome: "Beatriz Machado", cargo: "Websites · Identidade Visual · Gestão de Redes Sociais", email: "beatrizmachadostudio@gmail.com", telefone: "", site: "beatrizstudio.pt", instagram: "@beatrizstudio.web", frase: "" };
+export async function getSignature(s, senderName) {
+  let sig = null;
+  try { sig = await s.get("templates/cfg-signature", { type: "json" }); } catch (e) { console.error(e); }
+  sig = { ...DEFAULT_SIG, ...(sig || {}) };
+  if (senderName) sig.nome = senderName;
+  return sig;
+}
+const linkS = (href, t) => `<a href="${escH(href)}" style="color:#9A4B2E;text-decoration:none">${escH(t)}</a>`;
+export function signatureHtml(g) {
+  const site = String(g.site || "").replace(/^https?:\/\//, "");
+  const ig = String(g.instagram || "").replace(/^@/, "");
+  const bits = [g.email && linkS("mailto:" + g.email, g.email), g.telefone && linkS("tel:" + String(g.telefone).replace(/\s/g, ""), g.telefone), site && linkS("https://" + site, site), ig && linkS("https://instagram.com/" + ig, "@" + ig)].filter(Boolean);
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:1px solid #DDD2C2;padding-top:16px;width:100%"><tr><td style="padding-top:16px">
+<div style="font-size:17px;font-weight:bold;letter-spacing:-0.3px;color:#1A1A1A">${escH(g.nome || "")}<span style="color:#C26A4A">.</span></div>
+${g.cargo ? `<div style="font-size:13px;color:#5B534B;margin-top:3px">${escH(g.cargo)}</div>` : ""}
+${bits.length ? `<div style="font-size:13px;margin-top:8px;line-height:1.7">${bits.join(' <span style="color:#CBBDA9">·</span> ')}</div>` : ""}
+${g.frase ? `<div style="font-size:12.5px;color:#5B534B;margin-top:8px;font-style:italic">${escH(g.frase)}</div>` : ""}
+</td></tr></table>`;
+}
+export function signatureText(g) {
+  return "\n\n--\n" + [g.nome, g.cargo, [g.email, g.telefone, g.site, g.instagram].filter(Boolean).join(" · "), g.frase].filter(Boolean).join("\n");
+}

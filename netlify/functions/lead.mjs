@@ -1,7 +1,7 @@
 // Recebe os pedidos de orçamento do site (com ou sem conta) e guarda-os na base de dados (Netlify Blobs).
 // Proteção anti-spam invisível: campo armadilha, tempo mínimo de preenchimento e limite por IP.
 // Cria uma notificação no painel e envia um email à Beatriz (e ao cliente, se deixou email).
-import { json, clean, sha, store, sessionUser, limited, notify, sendMail, mailLayout, p, rows, button, env, siteUrl, emailOk, phoneOk, ip } from "../lib/common.mjs";
+import { json, clean, sha, store, sessionUser, limited, notify, sendMail, mailLayout, p, rows, button, env, siteUrl, emailOk, phoneOk, ip, getSignature, signatureText } from "../lib/common.mjs";
 
 // Categorias e subcategorias aceites no formulário de orçamento (iguais às do site).
 const CATS = {
@@ -83,12 +83,13 @@ export default async (req) => {
     }));
   }
   if (lead.email) {
+    const sig = await getSignature(s);
     tasks.push(sendMail({
       to: lead.email,
       subject: "Recebi o teu pedido de orçamento",
       html: mailLayout("Pedido recebido", p(`Olá ${lead.nome.split(" ")[0]},`) +
-        p("Obrigada pelo teu pedido. Vou analisar o teu projeto e entrar em contacto contigo" + (lead.telefone ? " pelo WhatsApp ou por email" : " por email") + ", em 24 a 48 horas, com os próximos passos.") + details),
-      text: `Olá ${lead.nome.split(" ")[0]},\n\nObrigada pelo teu pedido. Vou analisar o teu projeto e entrar em contacto contigo${lead.telefone ? " pelo WhatsApp ou por email" : " por email"}, em 24 a 48 horas.\n\n${lead.servico}`
+        p("Obrigada pelo teu pedido. Vou analisar o teu projeto e entrar em contacto contigo" + (lead.telefone ? " pelo WhatsApp ou por email" : " por email") + ", em 24 a 48 horas, com os próximos passos.") + details, sig),
+      text: `Olá ${lead.nome.split(" ")[0]},\n\nObrigada pelo teu pedido. Vou analisar o teu projeto e entrar em contacto contigo${lead.telefone ? " pelo WhatsApp ou por email" : " por email"}, em 24 a 48 horas.\n\n${lead.servico}` + signatureText(sig)
     }));
   }
   await Promise.allSettled(tasks);

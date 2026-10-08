@@ -3,13 +3,13 @@
 // Pessoas da equipa entram com email + palavra-passe própria, criada por um link de convite.
 // A equipa não vê faturação (valores e pagamentos) e cada pessoa tem a sua própria agenda.
 import { createHash, timingSafeEqual } from "node:crypto";
-import { json, env, sha, ip, limited, hashPw, checkPw, newToken, newCode, codeBox, store as getCrm, publicUser, sendMail, mailLayout, mailText, mailReady, p, button, siteUrl, emailOk } from "../lib/common.mjs";
+import { json, env, sha, ip, limited, hashPw, checkPw, newToken, newCode, codeBox, store as getCrm, publicUser, sendMail, mailLayout, mailText, mailReady, p, button, siteUrl, emailOk, stripe, stripeReady, getSignature, signatureText } from "../lib/common.mjs";
 
 const OWNER_COLS = new Set(["leads", "clients", "projects", "boards", "agenda", "templates"]);
 const MEMBER_COLS = new Set(["leads", "agenda", "templates"]);
 const SESSION_DAYS = 365, INVITE_DAYS = 7, CODE_MIN = 15;
 const ownerEmails = () => String(env("OWNER_EMAIL") || "beatrizmachadostudio@gmail.com,b.machadoo188@gmail.com").toLowerCase().split(/[,\s]+/).filter(Boolean);
-const MONEY = ["valor", "pago", "pagoEm"];
+const MONEY = ["valor", "pago", "pagoEm", "payments", "quote", "sinalEm"];
 const MEMBER_LEAD_FIELDS = ["notes", "visto", "history"];
 
 const hash = (s) => createHash("sha256").update(String(s)).digest();
@@ -124,6 +124,18 @@ export default async (req) => {
     await store.setJSON("staff/" + st.id, upd);
     return json({ ok: true, token: await newSession(store, st.id), me: memberMe(upd) });
   }
+  if (a === "quote-view") {
+    const tok = String(body.token || "");
+    if (!/^[\w-]{10,64}$/.test(tok)) return json({ error: "Link inválido." }, 400);
+    const map = await store.get("quotes/" + tok, { type: "json" });
+    const lead = map && (await store.get("leads/" + map.leadId, { type: "json" }));
+    if (!lead || !lead.quote || lead.quote.token !== tok) return json({ error: "Este orçamento já não está disponível." }, 404);
+    const q = lead.quote, P = (lead.payments || []).filter((x) => x.kind === "sinal" || x.kind === "final");
+    const pub = (k) => { const L = P.filter((x) => x.kind === k && x.status !== "cancelled").slice(-1)[0]; return L ? { amount: L.amount, status: L.status, url: L.status === "pending" || L.status === "waiting" ? L.url : null, paidAt: L.paidAt || null } : null; };
+    return json({ ok: true, quote: { number: q.number, createdAt: q.createdAt, sentAt: q.sentAt || q.createdAt, items: q.items, total: q.total, prazo: q.prazo, validade: q.validade, notas: q.notas },
+      client: { nome: lead.nome, marca: lead.marca || "", email: lead.email || "" }, service: lead.categoria ? lead.categoria + (lead.subcategoria ? " — " + lead.subcategoria : "") : (lead.plano || lead.servico || ""),
+      sinal: pub("sinal"), final: pub("final") });
+  }
   if (a === "invite-info" || a === "accept-invite") {
     const tok = String(body.token || "");
     if (!/^[\w-]{10,64}$/.test(tok)) return json({ error: "Link inválido." }, 400);
@@ -147,6 +159,7 @@ export default async (req) => {
   if (req.method === "GET") {
     const [leads, agenda, templates] = await Promise.all([list(store, "leads/"), list(store, "agenda/"), list(store, "templates/")]);
     const base = { me, leads: (owner ? leads : leads.map(stripMoney)).sort(newest), agenda: agenda.filter(mine(me)), templates };
+    base.stripe = owner ? stripeReady() : false;
     if (!owner) return json({ ...base, clients: [], projects: [], users: [], notifs: [], testimonials: [], invites: [], boards: [], staff: [] });
     const [clients, projects, users, notifs, testimonials, invites, boardList, staff] = await Promise.all([
       list(store, "clients/"), list(store, "projects/"), list(store, "users/"), list(store, "notifs/", 60),
@@ -175,15 +188,108 @@ export default async (req) => {
       const text = String(body.text || "").slice(0, 8000).trim(), subject = String(body.subject || "Beatriz Machado").slice(0, 200).trim();
       if (!text) return json({ error: "A mensagem está vazia." }, 400);
       if (!mailReady()) return json({ error: "O envio de emails não está configurado no Netlify." }, 500);
-      const r = await sendMail({ to: lead.email, subject, html: mailLayout(subject, mailText(text)), text, replyTo: env("REPLY_TO") || "beatrizmachadostudio@gmail.com" });
+      const sig = await getSignature(store, owner ? "" : me.name);
+      const r = await sendMail({ to: lead.email, subject, html: mailLayout(subject, mailText(text), sig), text: text + signatureText(sig), replyTo: env("REPLY_TO") || "beatrizmachadostudio@gmail.com" });
       if (!r.ok) return json({ error: "O serviço de email recusou o envio. Tenta novamente daqui a pouco." }, 502);
-      const upd = { ...lead, visto: true, history: [...(lead.history || []), { at: new Date().toISOString(), via: "email", subject, text, by: me.name }], updatedAt: new Date().toISOString() };
+      const upd = { ...lead, visto: true, history: [...(lead.history || []), { at: new Date().toISOString(), via: "email", subject, text, by: me.name, tpl: String(body.tpl || "").replace(/[^\w-]/g, "").slice(0, 40) }], updatedAt: new Date().toISOString() };
       await store.setJSON("leads/" + id, upd);
       return json({ ok: true, item: owner ? upd : stripMoney(upd) });
     }
 
     if (a) {
       if (!owner) return json({ error: "Sem permissão." }, 403);
+      /* pagamentos (Stripe) */
+      const loadLead = async () => { const id = String(body.id || "").replace(/[^\w-]/g, ""); return { id, lead: await store.get("leads/" + id, { type: "json" }) }; };
+      const createPay = async (lead, cents, desc, kind, redirect) => {
+        const payId = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        const price = await stripe("prices", { currency: "eur", unit_amount: cents, product_data: { name: desc } });
+        const link = await stripe("payment_links", {
+          "line_items[0][price]": price.id, "line_items[0][quantity]": 1,
+          after_completion: { type: "redirect", redirect: { url: redirect || siteUrl(req) + "/pagamento/" } },
+          restrictions: { completed_sessions: { limit: 1 } },
+          metadata: { leadId: lead.id, payId, kind },
+          payment_intent_data: { description: desc + " · " + (lead.nome || ""), metadata: { leadId: lead.id, payId, kind } }
+        });
+        await store.setJSON("paylinks/" + link.id, { leadId: lead.id, payId });
+        return { id: payId, kind, link: link.id, url: link.url + (lead.email ? "?prefilled_email=" + encodeURIComponent(lead.email) : ""), amount: cents / 100, desc, status: "pending", createdAt: new Date().toISOString() };
+      };
+      const cancelPending = async (lead, kind) => {
+        for (const p of (lead.payments || []).filter((x) => x.kind === kind && (x.status === "pending" || x.status === "waiting"))) {
+          if (p.link) { try { await stripe("payment_links/" + p.link, { active: "false" }); } catch (e) { console.error(e); } }
+          p.status = "cancelled";
+        }
+      };
+      const paidOf = (lead) => (lead.payments || []).filter((x) => x.status === "paid").reduce((t, x) => t + Math.round(x.amount * 100), 0);
+      const svcName = (l) => l.categoria ? l.categoria + (l.subcategoria ? " — " + l.subcategoria : "") : (l.plano || String(l.servico || "Projeto"));
+      const quoteUrl = (q) => siteUrl(req) + "/orcamento/?t=" + q.token;
+
+      if (a === "quote-save") {
+        const { id, lead } = await loadLead();
+        if (!lead) return json({ error: "Pedido não encontrado" }, 404);
+        const q = body.quote || {};
+        const items = (Array.isArray(q.items) ? q.items : []).slice(0, 40).map((x) => ({
+          d: String(x.d || "").trim().slice(0, 160), det: String(x.det || "").trim().slice(0, 600),
+          q: Math.max(1, Math.min(999, parseInt(x.q, 10) || 1)), v: Math.max(0, Math.round(parseFloat(String(x.v || "0").replace(",", ".")) * 100) / 100)
+        })).filter((x) => x.d);
+        if (!items.length) return json({ error: "Adiciona pelo menos uma linha ao orçamento." }, 400);
+        const total = Math.round(items.reduce((t, x) => t + x.q * x.v * 100, 0)) / 100;
+        if (!(total >= 1)) return json({ error: "O total do orçamento tem de ser pelo menos 1€." }, 400);
+        const prev = lead.quote || {};
+        let number = prev.number;
+        if (!number) {
+          const seq = (await store.get("meta/quote-seq", { type: "json" })) || { n: 0 };
+          seq.n += 1; await store.setJSON("meta/quote-seq", seq);
+          number = "ORC-" + new Date().getFullYear() + "-" + String(seq.n).padStart(3, "0");
+        }
+        const token = prev.token || newToken().slice(0, 24);
+        const quote = { ...prev, token, number, items, total, prazo: String(q.prazo || "").slice(0, 120), validade: Math.max(1, Math.min(90, parseInt(q.validade, 10) || 15)),
+          notas: String(q.notas || "").slice(0, 1200), updatedAt: new Date().toISOString(), createdAt: prev.createdAt || new Date().toISOString() };
+        await store.setJSON("quotes/" + token, { leadId: id });
+        const upd = { ...lead, quote, valor: total, updatedAt: new Date().toISOString() };
+        await store.setJSON("leads/" + id, upd);
+        return json({ ok: true, item: upd, url: quoteUrl(quote) });
+      }
+      if (a === "quote-send" || a === "pay-final" || a === "pay-link") {
+        if (!stripeReady()) return json({ error: "O Stripe ainda não está ligado. Falta a variável STRIPE_SECRET_KEY no Netlify." }, 500);
+        const { id, lead } = await loadLead();
+        if (!lead) return json({ error: "Pedido não encontrado" }, 404);
+        try {
+          const upd = { ...lead, payments: (lead.payments || []).map((x) => ({ ...x })), updatedAt: new Date().toISOString() };
+          let pay;
+          if (a === "quote-send") {
+            if (!lead.quote) return json({ error: "Guarda primeiro o orçamento." }, 400);
+            await cancelPending(upd, "sinal");
+            const cents = Math.round(lead.quote.total * 100 / 2);
+            pay = await createPay(lead, cents, "Sinal 50% · " + svcName(lead) + " · " + lead.quote.number, "sinal", quoteUrl(lead.quote) + "&pago=1");
+            upd.quote = { ...lead.quote, sentAt: new Date().toISOString() };
+          } else if (a === "pay-final") {
+            if (!lead.quote) return json({ error: "Este pedido não tem orçamento." }, 400);
+            await cancelPending(upd, "final");
+            const cents = Math.round(lead.quote.total * 100) - paidOf(lead);
+            if (cents < 50) return json({ error: "Não há valor em falta neste orçamento." }, 400);
+            pay = await createPay(lead, cents, "Pagamento final · " + svcName(lead) + " · " + lead.quote.number, "final", quoteUrl(lead.quote) + "&pago=1");
+          } else {
+            const cents = Math.round(parseFloat(String(body.amount || "").replace(",", ".")) * 100);
+            if (!(cents >= 50)) return json({ error: "Escreve um valor de pelo menos 0,50€." }, 400);
+            pay = await createPay(lead, cents, String(body.desc || "").trim().slice(0, 200) || "Beatriz Machado", body.kind === "extra" ? "extra" : "total");
+            if (!(+upd.valor > 0)) upd.valor = cents / 100;
+          }
+          upd.payments.push(pay);
+          await store.setJSON("leads/" + id, upd);
+          return json({ ok: true, item: upd, pay, url: upd.quote ? quoteUrl(upd.quote) : null });
+        } catch (e) { return json({ error: "O Stripe não aceitou: " + e.message }, 502); }
+      }
+      if (a === "pay-cancel") {
+        const id = String(body.id || "").replace(/[^\w-]/g, "");
+        const lead = await store.get("leads/" + id, { type: "json" });
+        const pay = lead && (lead.payments || []).find((x) => x.id === body.payId);
+        if (!pay) return json({ error: "Pagamento não encontrado" }, 404);
+        if (pay.status === "paid") return json({ error: "Este pagamento já foi pago." }, 400);
+        if (stripeReady() && pay.link) { try { await stripe("payment_links/" + pay.link, { active: "false" }); } catch (e) { console.error(e); } }
+        const upd = { ...lead, payments: lead.payments.map((x) => (x.id === pay.id ? { ...x, status: "cancelled" } : x)) };
+        await store.setJSON("leads/" + id, upd);
+        return json({ ok: true, item: upd });
+      }
       /* equipa */
       if (a === "staff-add") {
         const name = String(body.name || "").trim().slice(0, 120), email = String(body.email || "").trim().toLowerCase().slice(0, 200);
@@ -243,6 +349,7 @@ export default async (req) => {
     const now = new Date().toISOString();
     const id = String(item.id || crypto.randomUUID()).replace(/[^\w-]/g, "").slice(0, 80);
     const prev = await store.get(col + "/" + id, { type: "json" });
+    if (col === "templates" && id.startsWith("cfg-") && !owner) return json({ error: "Sem permissão." }, 403);
 
     if (col === "agenda") {
       if (prev && (prev.uid || "owner") !== me.uid) return json({ error: "Sem permissão." }, 403);
