@@ -1,1 +1,1 @@
-{"name": "Beatriz Machado Studio", "short_name": "BM Studio", "icons": [{"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}], "theme_color": "#FDFCF9", "background_color": "#FDFCF9", "display": "browser"}
+{"name": "Beatriz Machado Studio", "short_name": "BM Studio", "icons": [{"src": "/favicon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}], "theme_color": "#FDFCF9", "background_color": "#FDFCF9", "display": "browser"}

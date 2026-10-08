@@ -85,22 +85,22 @@ export async function sendMail({ to, subject, html, text, replyTo }) {
 }
 const escH = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export function mailLayout(title, bodyHtml) {
-  return `<!doctype html><html><body style="margin:0;background:#F6F3ED;font-family:Arial,Helvetica,sans-serif;color:#15130F">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F3ED;padding:32px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border:1px solid #E7E1D6">
-<tr><td style="padding:28px 32px 0"><span style="display:inline-block;border:1px solid #B8860B;color:#B8860B;font-weight:bold;font-size:12px;padding:6px 7px">BM</span>
-<span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#B8860B;margin-left:10px">Beatriz Machado Studio</span></td></tr>
-<tr><td style="padding:22px 32px 32px"><h1 style="font-size:22px;margin:0 0 14px;font-weight:600">${escH(title)}</h1>${bodyHtml}</td></tr>
-</table><p style="font-size:11px;color:#6E675B;margin:16px 0 0">Web Design &amp; Brand Identity · beatrizstudio.pt</p></td></tr></table></body></html>`;
+  return `<!doctype html><html><body style="margin:0;background:#F3EDE4;font-family:Helvetica,Arial,sans-serif;color:#1A1A1A">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EDE4;padding:32px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#FBF8F3;border:1px solid #DDD2C2;border-radius:22px">
+<tr><td style="padding:30px 34px 0;font-size:22px;font-weight:bold;letter-spacing:-0.5px;color:#1A1A1A">beatriz machado<span style="color:#C26A4A">.</span></td></tr>
+<tr><td style="padding:22px 34px 34px"><h1 style="font-size:22px;margin:0 0 16px;font-weight:600;line-height:1.25">${escH(title)}</h1>${bodyHtml}</td></tr>
+</table><p style="font-size:11px;color:#5B534B;margin:16px 0 0">Websites · Identidade Visual · Redes Sociais · beatrizstudio.pt</p></td></tr></table></body></html>`;
 }
+export const mailText = (t) => String(t || "").split(/\n{2,}/).map((para) => `<p style="font-size:15px;line-height:1.6;margin:0 0 14px;color:#3A332D">${escH(para).replace(/\n/g, "<br>")}</p>`).join("");
 export const p = (t) => `<p style="font-size:15px;line-height:1.6;margin:0 0 12px;color:#3D3830">${escH(t)}</p>`;
 export const codeBox = (c) => `<p style="font-size:34px;letter-spacing:10px;font-weight:bold;margin:8px 0 18px;color:#15130F">${escH(c)}</p>`;
 export function rows(list) {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E7E1D6;margin:6px 0 16px">${list
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #DDD2C2;margin:6px 0 16px">${list
     .filter((r) => r[1])
-    .map((r) => `<tr><td style="padding:9px 0;border-bottom:1px solid #E7E1D6;font-size:12px;color:#6E675B;text-transform:uppercase;letter-spacing:1px;width:120px;vertical-align:top">${escH(r[0])}</td><td style="padding:9px 0;border-bottom:1px solid #E7E1D6;font-size:14px">${escH(r[1])}</td></tr>`)
+    .map((r) => `<tr><td style="padding:9px 0;border-bottom:1px solid #DDD2C2;font-size:12px;color:#5B534B;text-transform:uppercase;letter-spacing:1px;width:120px;vertical-align:top">${escH(r[0])}</td><td style="padding:9px 0;border-bottom:1px solid #DDD2C2;font-size:14px">${escH(r[1])}</td></tr>`)
     .join("")}</table>`;
 }
 export const button = (href, label) =>
-  `<p style="margin:18px 0 4px"><a href="${escH(href)}" style="display:inline-block;background:#B8860B;color:#FFFFFF;text-decoration:none;font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;padding:13px 20px">${escH(label)}</a></p>`;
+  `<p style="margin:18px 0 4px"><a href="${escH(href)}" style="display:inline-block;background:#A65135;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:bold;padding:13px 22px;border-radius:999px">${escH(label)}</a></p>`;
 export const siteUrl = (req) => env("SITE_URL") || new URL(req.url).origin;

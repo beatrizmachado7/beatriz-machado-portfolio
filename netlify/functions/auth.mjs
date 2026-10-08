@@ -34,7 +34,7 @@ async function myLeads(s, user) {
   const { blobs } = await s.list({ prefix: "uleads/" + user.id + "/" });
   const leads = await Promise.all(blobs.map((b) => s.get("leads/" + b.key.split("/").pop(), { type: "json" })));
   return leads.filter(Boolean)
-    .map((l) => ({ id: l.id, createdAt: l.createdAt, type: l.type, servico: l.servico, extras: l.extras, total: l.total, status: l.status }))
+    .map((l) => ({ id: l.id, createdAt: l.createdAt, type: l.type, categoria: l.categoria || "", subcategoria: l.subcategoria || "", servico: l.servico, extras: l.extras, total: l.total, status: l.status === "proposta" ? "analise" : l.status }))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 

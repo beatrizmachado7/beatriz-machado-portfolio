@@ -31,3 +31,13 @@
   for = "/conta/*"
   [headers.values]
     X-Robots-Tag = "noindex"
+
+[[redirects]]
+  from = "/rebranding/*"
+  to = "/gestao-redes-sociais/"
+  status = 301
+
+[[redirects]]
+  from = "/rebranding"
+  to = "/gestao-redes-sociais/"
+  status = 301
