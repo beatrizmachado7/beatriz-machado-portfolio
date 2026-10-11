@@ -307,6 +307,8 @@ details.more summary{font:500 17px var(--serif);color:var(--ink)}
 .sigp{border-top:1px solid var(--line);padding:14px 2px 2px;display:flex;flex-direction:column;gap:3px}
 .sigp b{font:600 17px var(--serif);letter-spacing:-.01em}.sigp b i{font-style:normal;color:var(--terra)}
 .sigp span{font-size:13px;color:var(--mut)}.sigp .sigl{color:var(--tink)}.sigp em{font-size:12.5px;color:var(--mut)}
+
+.setupc{margin-bottom:18px;border-color:#E3B9A6;background:#FDF6F1}.setupc h2{font-size:18px;margin-bottom:6px}.setupc p{margin:0;font-size:14px;color:var(--mut)}.setupc.test{border-color:#B9D6C1;background:var(--oksoft)}
 </style></head><body><div id="app"></div><script>(function(){
 "use strict";
 /* =========================================================
@@ -387,7 +389,7 @@ function load(silent){
     st.known=D.leads.map(function(l){return l.id;});
     var paidNow=[];D.leads.forEach(function(l){(l.payments||[]).forEach(function(p){if(p.status==="paid")paidNow.push(p.id);});});
     if(st.knownPaid){var np=paidNow.filter(function(x){return st.knownPaid.indexOf(x)<0;});if(np.length){chime();toast(np.length>1?np.length+" pagamentos recebidos":"Pagamento recebido!");}}st.knownPaid=paidNow;
-    D.stripe=!!j.stripe;st.data=D;st.me=j.me||st.me||null;st.loading=false;if(!isOwner()&&st.view==="testemunhos"||!isOwner()&&st.view==="equipa")st.view="inicio";
+    D.stripe=!!j.stripe;D.stripeMode=j.stripeMode||null;D.stripeWebhook=!!j.stripeWebhook;st.data=D;st.me=j.me||st.me||null;st.loading=false;if(!isOwner()&&st.view==="testemunhos"||!isOwner()&&st.view==="equipa")st.view="inicio";
     var dl=st.drawer&&st.drawer.type==="lead"&&D.leads.filter(function(x){return x.id===st.drawer.id;})[0],ol=st.drawer&&st.drawer.type==="lead"&&st.data===D?null:null;
     var stageChanged=dl&&st.lastStage&&st.lastStage[dl.id]&&st.lastStage[dl.id]!==stageOf(dl);
     if(silent&&busy()&&!stageChanged)paintBadges();else{if(stageChanged)resetFn();render();}
@@ -489,6 +491,10 @@ function viewInicio(){
   if(!isOwner()){var pr=st.data.leads.filter(function(l){return !(l.history&&l.history.length);}).length;
     o+='<div class="kpis"><button class="kpi kb" data-go="agenda"><small>Tarefas para hoje</small><b>'+todo+'</b><span>Abrir agenda →</span></button><button class="kpi kb" data-go="pedidos" data-f="novos"><small>Pedidos novos</small><b>'+nn+'</b><span>'+(nn?"Ver pedidos →":"Tudo visto")+'</span></button><button class="kpi kb" data-go="pedidos" data-f="porresponder"><small>Por responder</small><b>'+pr+'</b><span>'+(pr?"Responder →":"Tudo respondido")+'</span></button></div><div class="home h2c"><div class="hcol">'+homeAgenda(T)+'</div><div class="hcol">'+homeLeads()+'</div></div>';
     return o;}
+  if(!st.demo){var sm=st.data.stripeMode,sw=st.data.stripeWebhook;
+    if(!st.data.stripe)o+='<div class="card setupc"><h2>Pagamentos online por ligar</h2><p>Para os clientes pagarem o sinal e o pagamento final por cartão, MB WAY ou Multibanco, falta ligar o Stripe: cria a conta em stripe.com e põe as chaves <b>STRIPE_SECRET_KEY</b> e <b>STRIPE_WEBHOOK_SECRET</b> no Netlify. Até lá, podes registar pagamentos à mão.</p></div>';
+    else if(!sw)o+='<div class="card setupc"><h2>Falta o webhook do Stripe</h2><p>Os links de pagamento já funcionam, mas o painel só sabe que o cliente pagou depois de pores a chave <b>STRIPE_WEBHOOK_SECRET</b> no Netlify.</p></div>';
+    else if(sm==="test")o+='<div class="card setupc test"><h2>Stripe em modo de teste</h2><p>Está tudo ligado, mas os pagamentos ainda não são reais. Experimenta com o cartão 4242 4242 4242 4242 e, quando estiver tudo bem, troca para as chaves "live".</p></div>';}
   o+='<div class="kpis k4"><div class="kpi"><small>Faturado hoje</small><b>'+eur(hoje)+'</b><span>'+(hoje?"Bom trabalho!":"Ainda nada hoje")+'</span></div>'+
     '<div class="kpi hero"><small>'+(isCur?"Este mês":esc(monthName(m)))+'</small><b>'+eur(tot)+'</b><span>'+dtxt+'</span></div>'+
     '<div class="kpi"><small>Por receber</small><b>'+eur(openSum)+'</b><span>'+(open.length?open.length+(open.length>1?" pedidos por pagar":" pedido por pagar"):"Nada pendente")+'</span></div>'+
@@ -698,7 +704,7 @@ function viewPayOnline(l){var P=paysOf(l).slice().reverse(),ready=st.data.stripe
       '<small style="margin:4px 0 0">Criado '+esc(dShort(p.createdAt,true))+(p.paidAt?' · pago '+esc(dShort(p.paidAt,true)):'')+'</small>'+
       (open?'<div class="acts" style="margin-top:10px"><button class="btn btn-s btn-sm" data-a="copy" data-txt="'+esc(p.url)+'">'+IC.copy+'Copiar link</button><button class="btn btn-s btn-sm" data-a="pay-msg">Usar na mensagem</button>'+(st.demo?'<button class="btn btn-s btn-sm" data-a="pay-demo" data-id="'+esc(p.id)+'">Simular pagamento</button>':'')+'<button class="lk" style="color:#9B2C1F" data-a="pay-cancel" data-id="'+esc(p.id)+'">Cancelar link</button></div>':'')+'</li>';}).join("")+'</ul>';
   return o+'</div>';}
-var DEF_SIG={nome:"Beatriz Machado",cargo:"Websites · Identidade Visual · Gestão de Redes Sociais",email:"beatrizmachadostudio@gmail.com",telefone:"",site:"beatrizstudio.pt",instagram:"@beatrizstudio.web",frase:""};
+var DEF_SIG={nome:"Beatriz Machado",cargo:"Websites · Identidade Visual · Gestão de Redes Sociais",email:"beatrizmachadostudio@gmail.com",telefone:"",site:"beatrizstudio.pt",instagram:"@beatrizstudio.pt",frase:""};
 function sig(){var c=st.data.templates.filter(function(t){return t.id==="cfg-signature";})[0];return Object.assign({},DEF_SIG,c||{});}
 function sigPreview(g){var bits=[g.email,g.telefone,String(g.site||"").replace(/^https?:\/\//,""),g.instagram?("@"+String(g.instagram).replace(/^@/,"")):""].filter(Boolean);
   return '<div class="sigp"><b>'+esc(g.nome)+'<i>.</i></b>'+(g.cargo?'<span>'+esc(g.cargo)+'</span>':'')+(bits.length?'<span class="sigl">'+bits.map(esc).join(' · ')+'</span>':'')+(g.frase?'<em>'+esc(g.frase)+'</em>':'')+'</div>';}

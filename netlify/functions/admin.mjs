@@ -160,6 +160,7 @@ export default async (req) => {
     const [leads, agenda, templates] = await Promise.all([list(store, "leads/"), list(store, "agenda/"), list(store, "templates/")]);
     const base = { me, leads: (owner ? leads : leads.map(stripMoney)).sort(newest), agenda: agenda.filter(mine(me)), templates };
     base.stripe = owner ? stripeReady() : false;
+    if (owner) { const sk = String(env("STRIPE_SECRET_KEY") || ""); base.stripeMode = sk.startsWith("sk_live") || sk.startsWith("rk_live") ? "live" : sk ? "test" : null; base.stripeWebhook = !!env("STRIPE_WEBHOOK_SECRET"); }
     if (!owner) return json({ ...base, clients: [], projects: [], users: [], notifs: [], testimonials: [], invites: [], boards: [], staff: [] });
     const [clients, projects, users, notifs, testimonials, invites, boardList, staff] = await Promise.all([
       list(store, "clients/"), list(store, "projects/"), list(store, "users/"), list(store, "notifs/", 60),

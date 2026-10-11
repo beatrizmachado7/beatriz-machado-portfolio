@@ -122,7 +122,7 @@ export async function stripe(path, params, method = "POST") {
 export const lisbonDate = (d = new Date()) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Lisbon" });
 
 /* ---------- assinatura dos emails ---------- */
-export const DEFAULT_SIG = { nome: "Beatriz Machado", cargo: "Websites · Identidade Visual · Gestão de Redes Sociais", email: "beatrizmachadostudio@gmail.com", telefone: "", site: "beatrizstudio.pt", instagram: "@beatrizstudio.web", frase: "" };
+export const DEFAULT_SIG = { nome: "Beatriz Machado", cargo: "Websites · Identidade Visual · Gestão de Redes Sociais", email: "beatrizmachadostudio@gmail.com", telefone: "", site: "beatrizstudio.pt", instagram: "@beatrizstudio.pt", frase: "" };
 export async function getSignature(s, senderName) {
   let sig = null;
   try { sig = await s.get("templates/cfg-signature", { type: "json" }); } catch (e) { console.error(e); }
