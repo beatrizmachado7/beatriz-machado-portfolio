@@ -54,7 +54,7 @@ async function createInvite(store, member, req) {
   let mailed = false;
   if (mailReady()) {
     const first = member.name.split(" ")[0];
-    const r = await sendMail({ to: member.email, subject: "Acesso ao painel da Beatriz Machado",
+    const r = await sendMail({ to: member.email, subject: "Acesso ao painel do Beatriz Studio",
       html: mailLayout("Olá " + first + "!", p("A Beatriz deu-te acesso ao painel do estúdio. Não precisas de criar conta em lado nenhum: carrega no botão, cria a tua palavra-passe e fica feito.") + button(link, "Entrar no painel") + p("Também podes entrar a qualquer momento em " + siteUrl(req) + "/admin com o teu email (" + member.email + ").")),
       text: `Olá ${first}!\n\nA Beatriz deu-te acesso ao painel do estúdio. Entra aqui e cria a tua palavra-passe:\n${link}\n\nTambém podes entrar em ${siteUrl(req)}/admin com o teu email (${member.email}).` });
     mailed = !!r.ok;
@@ -186,7 +186,7 @@ export default async (req) => {
       const lead = await store.get("leads/" + id, { type: "json" });
       if (!lead) return json({ error: "Pedido não encontrado" }, 404);
       if (!lead.email) return json({ error: "Este pedido não tem email." }, 400);
-      const text = String(body.text || "").slice(0, 8000).trim(), subject = String(body.subject || "Beatriz Machado").slice(0, 200).trim();
+      const text = String(body.text || "").slice(0, 8000).trim(), subject = String(body.subject || "Beatriz Studio").slice(0, 200).trim();
       if (!text) return json({ error: "A mensagem está vazia." }, 400);
       if (!mailReady()) return json({ error: "O envio de emails não está configurado no Netlify." }, 500);
       const sig = await getSignature(store, owner ? "" : me.name);
@@ -272,7 +272,7 @@ export default async (req) => {
           } else {
             const cents = Math.round(parseFloat(String(body.amount || "").replace(",", ".")) * 100);
             if (!(cents >= 50)) return json({ error: "Escreve um valor de pelo menos 0,50€." }, 400);
-            pay = await createPay(lead, cents, String(body.desc || "").trim().slice(0, 200) || "Beatriz Machado", body.kind === "extra" ? "extra" : "total");
+            pay = await createPay(lead, cents, String(body.desc || "").trim().slice(0, 200) || "Beatriz Studio", body.kind === "extra" ? "extra" : "total");
             if (!(+upd.valor > 0)) upd.valor = cents / 100;
           }
           upd.payments.push(pay);

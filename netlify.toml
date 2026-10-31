@@ -34,10 +34,20 @@
 
 [[redirects]]
   from = "/rebranding/*"
-  to = "/gestao-redes-sociais/"
+  to = "/identidade-visual/"
   status = 301
 
 [[redirects]]
   from = "/rebranding"
-  to = "/gestao-redes-sociais/"
+  to = "/identidade-visual/"
+  status = 301
+
+[[redirects]]
+  from = "/gestao-redes-sociais/*"
+  to = "/servicos/"
+  status = 301
+
+[[redirects]]
+  from = "/gestao-redes-sociais"
+  to = "/servicos/"
   status = 301

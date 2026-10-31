@@ -1,5 +1,5 @@
 <!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#F3EDE4">
-<title>Orçamento — Beatriz Machado</title><link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Orçamento — Beatriz Studio</title><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
 @font-face{font-family:Outfit;src:url(/assets/fonts/outfit-latin-wght-normal.woff2) format("woff2");font-weight:100 900;font-display:swap}
 @font-face{font-family:"Inclusive Sans";src:url(/assets/fonts/inclusive-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
@@ -54,9 +54,9 @@ function d(iso){var x=new Date(iso);return isNaN(x)?"":x.toLocaleDateString("pt-
 var P=new URLSearchParams(location.search),tok=P.get("t"),app=document.getElementById("app");
 function render(D){var q=D.quote,s=D.sinal,f=D.final,half=Math.round(q.total*100/2)/100,rest=Math.round((q.total-half)*100)/100;
   var exp=new Date(new Date(q.sentAt).getTime()+q.validade*864e5),expired=Date.now()>exp&&!(s&&s.status==="paid");
-  document.title="Orçamento "+q.number+" — Beatriz Machado";
+  document.title="Orçamento "+q.number+" — Beatriz Studio";
   var o=(P.get("pago")?'<div class="banner">Obrigada! Recebi o teu pagamento. Se pagaste por Multibanco, fica confirmado assim que for pago.</div>':'')+
-  '<main class="sheet"><div class="top"><div><a class="wm" href="/">beatriz machado<span>.</span></a><span class="wm-sub">Websites · Identidade Visual · Gestão de Redes Sociais</span></div>'+
+  '<main class="sheet"><div class="top"><div><a class="wm" href="/">beatriz studio<span>.</span></a><span class="wm-sub">Websites · Identidade Visual · Templates</span></div>'+
   '<div class="num"><b>Orçamento</b><span>'+esc(q.number)+'</span><small>'+esc(d(q.sentAt))+' · válido até '+esc(d(exp))+'</small></div></div>'+
   '<h1>'+esc(D.service||"Proposta")+'</h1><p class="lead">Preparado para '+esc(D.client.nome)+(D.client.marca?' · '+esc(D.client.marca):'')+'.</p>'+
   '<div class="meta"><div><small>Cliente</small><b>'+esc(D.client.nome)+'</b>'+(D.client.email?'<span style="font-size:13px;color:var(--mut)">'+esc(D.client.email)+'</span>':'')+'</div><div><small>Prazo</small><b>'+esc(q.prazo||"A combinar")+'</b></div><div><small>Total</small><b>'+eur(q.total)+'</b></div></div>'+
@@ -73,7 +73,7 @@ function render(D){var q=D.quote,s=D.sinal,f=D.final,half=Math.round(q.total*100
   else if(s&&s.status==="waiting")o+='<div class="pay"><div><h2>Referência Multibanco gerada</h2><p>Começo o projeto assim que o pagamento do sinal for confirmado.</p></div></div>';
   else if(expired)o+='<div class="pay"><div><h2>Este orçamento expirou</h2><p>Fala comigo para o atualizar: beatrizmachadostudio@gmail.com</p></div></div>';
   else if(s&&s.url)o+='<div class="pay"><div><h2>Para avançar, aprova o orçamento</h2><p>Pagas agora 50% ('+eur(half)+') e o restante só na entrega. Cartão, MB WAY ou Multibanco.</p></div><a class="btn" href="'+esc(s.url)+'">Aprovar e pagar '+eur(half)+'</a></div>';
-  o+='<div class="foot"><span>Beatriz Machado · Websites, Identidade Visual e Redes Sociais</span><span><a href="mailto:beatrizmachadostudio@gmail.com">beatrizmachadostudio@gmail.com</a> · <a href="/">beatrizstudio.pt</a></span></div></main>'+
+  o+='<div class="foot"><span>Beatriz Studio · Websites, Identidade Visual e Templates</span><span><a href="mailto:beatrizmachadostudio@gmail.com">beatrizmachadostudio@gmail.com</a> · <a href="/">beatrizstudio.pt</a></span></div></main>'+
      '<div class="tools"><button class="btn s" onclick="print()">Guardar em PDF</button></div>';
   app.innerHTML=o;}
 if(window.QUOTE_DATA){render(window.QUOTE_DATA);return;}

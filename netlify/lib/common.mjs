@@ -88,9 +88,9 @@ export function mailLayout(title, bodyHtml, sig) {
   return `<!doctype html><html><body style="margin:0;background:#F3EDE4;font-family:Helvetica,Arial,sans-serif;color:#1A1A1A">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EDE4;padding:32px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#FBF8F3;border:1px solid #DDD2C2;border-radius:22px">
-<tr><td style="padding:30px 34px 0;font-size:22px;font-weight:bold;letter-spacing:-0.5px;color:#1A1A1A">beatriz machado<span style="color:#C26A4A">.</span></td></tr>
+<tr><td style="padding:30px 34px 0;font-size:22px;font-weight:bold;letter-spacing:-0.5px;color:#5C1A26">beatriz studio<span style="color:#5C1A26">.</span></td></tr>
 <tr><td style="padding:22px 34px 34px"><h1 style="font-size:22px;margin:0 0 16px;font-weight:600;line-height:1.25">${escH(title)}</h1>${bodyHtml}${sig ? signatureHtml(sig) : ""}</td></tr>
-</table><p style="font-size:11px;color:#5B534B;margin:16px 0 0">Websites · Identidade Visual · Redes Sociais · beatrizstudio.pt</p></td></tr></table></body></html>`;
+</table><p style="font-size:11px;color:#5B534B;margin:16px 0 0">Websites · Identidade Visual · Templates · beatrizstudio.pt</p></td></tr></table></body></html>`;
 }
 export const mailText = (t) => String(t || "").split(/\n{2,}/).map((para) => `<p style="font-size:15px;line-height:1.6;margin:0 0 14px;color:#3A332D">${escH(para).replace(/\n/g, "<br>")}</p>`).join("");
 export const p = (t) => `<p style="font-size:15px;line-height:1.6;margin:0 0 12px;color:#3D3830">${escH(t)}</p>`;
@@ -107,6 +107,8 @@ export const siteUrl = (req) => env("SITE_URL") || new URL(req.url).origin;
 
 /* ---------- Stripe (pagamentos) ---------- */
 export const stripeReady = () => !!env("STRIPE_SECRET_KEY");
+// Reserva com pagamento no formulário do site: só fica ligada quando PAGAMENTOS_ATIVOS = sim no Netlify.
+export const payOn = () => stripeReady() && /^(sim|on|true|1)$/i.test(String(env("PAGAMENTOS_ATIVOS") || "").trim());
 export async function stripe(path, params, method = "POST") {
   const body = new URLSearchParams();
   const add = (k, v) => { if (v === undefined || v === null || v === "") return; if (typeof v === "object") Object.entries(v).forEach(([kk, vv]) => add(k + "[" + kk + "]", vv)); else body.append(k, String(v)); };
@@ -122,7 +124,7 @@ export async function stripe(path, params, method = "POST") {
 export const lisbonDate = (d = new Date()) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Lisbon" });
 
 /* ---------- assinatura dos emails ---------- */
-export const DEFAULT_SIG = { nome: "Beatriz Machado", cargo: "Websites · Identidade Visual · Gestão de Redes Sociais", email: "beatrizmachadostudio@gmail.com", telefone: "", site: "beatrizstudio.pt", instagram: "@beatrizstudio.pt", frase: "" };
+export const DEFAULT_SIG = { nome: "Beatriz Machado", cargo: "Websites · Identidade Visual · Templates", email: "beatrizmachadostudio@gmail.com", telefone: "", site: "beatrizstudio.pt", instagram: "@beatrizstudio.pt", frase: "" };
 export async function getSignature(s, senderName) {
   let sig = null;
   try { sig = await s.get("templates/cfg-signature", { type: "json" }); } catch (e) { console.error(e); }
