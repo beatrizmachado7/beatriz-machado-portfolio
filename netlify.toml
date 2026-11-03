@@ -27,10 +27,15 @@
   [headers.values]
     Cache-Control = "public, max-age=604800"
 
-[[headers]]
-  for = "/conta/*"
-  [headers.values]
-    X-Robots-Tag = "noindex"
+[[redirects]]
+  from = "/conta/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/conta"
+  to = "/"
+  status = 301
 
 [[redirects]]
   from = "/rebranding/*"

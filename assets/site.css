@@ -3,3 +3,52 @@
 .x5-who.x5-nophoto{grid-template-columns:1fr}
 
 .x11-about.x11-nophoto{grid-template-columns:1fr;max-width:820px}
+
+/* 31 out: botão Falar Comigo com etiqueta WhatsApp, rodapé sem fundo escuro, espaço no botão dos projetos */
+.x12-wa{position:relative;overflow:visible!important}
+.x12-wab{position:absolute;top:-10px;right:16px;background:#13773F;color:#fff!important;font-size:9.5px!important;font-weight:700;line-height:1;letter-spacing:.09em;text-transform:uppercase;padding:4px 8px;border-radius:999px;box-shadow:0 0 0 2px #fff;pointer-events:none}
+.x-foot{background:transparent!important;border-top:1px solid rgba(255,255,255,.12)!important}
+#projetos .x11-ctr{margin-top:clamp(40px,5vw,64px)!important}
+.x12-wa:before{display:none!important}
+.x12-wa{background-image:linear-gradient(110deg,transparent 40%,rgba(92,26,38,.10) 50%,transparent 60%);background-size:300% 100%;background-repeat:no-repeat;background-position:100% 0;transition:background-position .8s var(--x-ease,ease),transform .3s}
+.x12-wa:hover{background-position:0 0}
+
+/* 31 out: tamanhos mais contidos (o site parecia ter zoom) */
+.x11-h1{font-size:clamp(38px,4.7vw,66px)!important}
+.x-h1.x4-h1{font-size:clamp(40px,5.4vw,74px)!important}
+.x-h1.x-h1p{font-size:clamp(34px,4vw,54px)!important}
+h1.display,h2.display{font-size:clamp(36px,4.8vw,64px)!important}
+.x4-big{font-size:clamp(30px,3.5vw,50px)!important}
+.x11-t{font-size:clamp(30px,3.3vw,46px)!important}
+.x-h2{font-size:clamp(30px,3.2vw,44px)!important}
+.x-h3{font-size:clamp(21px,1.9vw,27px)!important}
+.x11-sp{font-size:clamp(24px,2.2vw,30px)!important}
+@media(min-width:861px){.x11-sec{padding-block:clamp(52px,5.6vw,84px)!important}.x11-hero{padding-bottom:clamp(48px,5.6vw,80px)!important}.x4-sec{padding-block:clamp(52px,5.6vw,84px)!important}}
+
+/* 31 out: catálogo de templates reais */
+.x4-tdesc{margin:6px 0 0;color:var(--x-mut,#cdb3b8);font-size:15px}
+.x4-tfoot span{flex-wrap:wrap}
+.x4-ph-s img{object-fit:cover;object-position:top}
+#tpldlg-p b{font-weight:600}
+
+/* 31 out: chips de nichos em linha no telemóvel */
+@media (max-width:700px){.x4-chips{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-right:-20px;padding:2px 20px 6px 0}.x4-chips::-webkit-scrollbar{display:none}.x4-chips .x4-chip{flex:0 0 auto!important;white-space:nowrap!important}}
+
+/* 1 nov: botão fixo do telemóvel com texto visível */
+.mcta{color:#5c1a26!important;box-shadow:0 14px 34px -12px #00000080!important}
+
+/* 1 nov: email dos cartões de contacto numa só linha no telemóvel */
+@media (max-width:480px){.x-chan small.mtxt{font-size:clamp(11px,3.2vw,13px)!important;white-space:nowrap;letter-spacing:-.01em}.x-chan>span:nth-child(2){min-width:0}}
+
+/* 1 nov: migalhas alinhadas */
+.crumbs li{display:inline-flex;align-items:center}.crumbs [aria-current]{display:inline-block;padding:6px 0}
+
+/* 3 nov: botão «Pedir Orçamento» nos cartões de planos */
+.x-plan .x-pbtn{margin-top:auto;width:100%;justify-content:center;min-height:50px;color:#5c1a26!important}
+.x-plans3{align-items:stretch!important}.x-plans3>.x-plan{height:auto}.x-plan .x-pbtn{margin-top:auto!important}.x-plan>.x-pcond{margin-bottom:22px}
+.x-plan>ul{margin-bottom:24px}
+/* 3 nov: cartão «Pronto para dares o próximo passo?» mais claro */
+.x-callout{background:radial-gradient(90% 130% at 0% 0%,#c0687c59,transparent 60%),linear-gradient(150deg,#8a3446,#6d2433)!important;border:1px solid #ffffff2b;box-shadow:0 40px 80px -50px #00000080}
+
+/* 3 nov: imagens dos projetos começam abaixo da barra do browser */
+.cgal-frame .cgal-track{padding-top:32px;background:#1b1915}
