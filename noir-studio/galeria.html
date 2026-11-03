@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galeria · Noir Studio</title>
+<meta name="description" content="Retratos, moda e marca pessoal.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Manrope:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="pg-galeria">
+<a class="skip" href="#main">Saltar para o conteúdo</a>
+<header class="site-head"><div class="wrap nav">
+<a class="logo" href="index.html" aria-label="Noir Studio, página inicial"><span class="lg">NOIR<i></i><small>studio</small></span></a>
+<nav class="menu" id="menu" aria-label="Principal"><a href="index.html">Início</a><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="galeria.html" aria-current="page">Galeria</a><a href="contacto.html">Contacto</a><a class="btn btn-p cta-m" href="contacto.html">Marcar sessão<svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></nav>
+<a class="btn btn-p btn-head" href="contacto.html">Marcar sessão<svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<button class="burger" type="button" aria-label="Abrir menu" aria-controls="menu" aria-expanded="false"><span></span><span></span><span></span></button>
+</div></header>
+<main id="main">
+<section class="ph"><img src="img/g1.jpg" alt="Noiva com flores em luz escura" width="1600" height="1067" decoding="async"><div class="wrap"><p class="eyebrow gline">Galeria</p><h1>Portefólio</h1><p class="lead">Retratos, moda e marca pessoal.</p></div></section>
+<section class="sec"><div class="wrap gal gal-full"><figure class="rv"><img src="img/g1.jpg" alt="Noiva com flores em luz escura" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/s1.jpg" alt="Retrato em fundo rosa" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/g2.jpg" alt="Câmara antiga e fotografias" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/s2.jpg" alt="Retrato de homem com coroa de flores" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/g3.jpg" alt="Fotógrafa entre flores" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/s3.jpg" alt="Retrato de mulher com óculos" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/g4.jpg" alt="Estúdio com equipamento de luz" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/hero.jpg" alt="Estúdio fotográfico com luzes e fundo branco" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/about.jpg" alt="Fotógrafo de rua com câmara" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/h2.jpg" alt="Fotógrafo com câmara na floresta" width="1600" height="1067" loading="lazy" decoding="async"></figure></div></section></main>
+<footer class="site-foot"><div class="wrap">
+<div class="fgrid4">
+<div><a class="logo" href="index.html"><span class="lg">NOIR<i></i><small>studio</small></span></a><p class="muted" style="margin-top:16px;max-width:32ch">Estúdio de retrato, moda e marca pessoal, com luz controlada e direção criativa.</p></div>
+<div><h4>Páginas</h4><ul><li><a href="index.html">Início</a></li><li><a href="sobre.html">Sobre</a></li><li><a href="servicos.html">Serviços</a></li><li><a href="galeria.html">Galeria</a></li><li><a href="contacto.html">Contacto</a></li></ul></div>
+<div><h4>Serviços</h4><ul><li><a href="servicos.html">Retrato</a></li><li><a href="servicos.html">Marca pessoal</a></li><li><a href="servicos.html">Moda e editorial</a></li></ul></div>
+<div><h4>Contacto</h4><ul><li>Rua de Miguel Bombarda, 400, Porto</li><li><a href="tel:+351913234567">+351 913 234 567</a></li><li><a href="mailto:studio@noirstudio.pt">studio@noirstudio.pt</a></li><li><a href="#" aria-label="Instagram (exemplo)">@noir.studio</a></li></ul></div>
+</div>
+<div class="fbot"><span>© <span id="y">2026</span> Noir Studio. Todos os direitos reservados.</span><span class="demo-tag">Template «Noir Studio» · Beatriz Studio · conteúdo de demonstração</span></div>
+</div></footer>
+<script>
+(function(){
+  var b=document.querySelector('.burger'),m=document.getElementById('menu');
+  if(b&&m){b.addEventListener('click',function(){var o=m.classList.toggle('open');b.setAttribute('aria-expanded',o);document.body.classList.toggle('menu-open',o);});
+    m.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){m.classList.remove('open');b.setAttribute('aria-expanded','false');document.body.classList.remove('menu-open');});});}
+  var h=document.querySelector('.site-head');function sc(){if(h)h.classList.toggle('scrolled',window.scrollY>20);}window.addEventListener('scroll',sc,{passive:true});sc();
+  var els=document.querySelectorAll('.rv');
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target);}});},{threshold:.12});els.forEach(function(x){io.observe(x);});}
+  else els.forEach(function(x){x.classList.add('in');});
+  document.querySelectorAll('form.demo-form').forEach(function(f){f.addEventListener('submit',function(ev){ev.preventDefault();var n=f.querySelector('.form-ok');if(n){n.hidden=false;n.focus();}});});
+  var y=document.getElementById('y');if(y)y.textContent=new Date().getFullYear();
+})();
+</script>
+</body>
+</html>
