@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galeria · Prumo Construção</title>
+<meta name="description" content="Moradias, reabilitações e estaleiros.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="pg-galeria">
+<a class="skip" href="#main">Saltar para o conteúdo</a>
+<header class="site-head"><div class="wrap nav">
+<a class="logo" href="index.html" aria-label="Prumo Construção, página inicial"><span class="lg">PRUMO<sup>®</sup></span></a>
+<nav class="menu" id="menu" aria-label="Principal"><a href="index.html">Início</a><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="galeria.html" aria-current="page">Galeria</a><a href="contacto.html">Contacto</a><a class="btn btn-p cta-m" href="contacto.html">Pedir orçamento<svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></nav>
+<a class="btn btn-p btn-head" href="contacto.html">Pedir orçamento<svg class="ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<button class="burger" type="button" aria-label="Abrir menu" aria-controls="menu" aria-expanded="false"><span></span><span></span><span></span></button>
+</div></header>
+<main id="main">
+<section class="ph"><div class="wrap"><h1 class="rv in">Obras</h1><p class="rv in">Moradias, reabilitações e estaleiros.</p></div></section><section><div class="gal gal-full"><figure class="rv"><img src="img/g1.jpg" alt="Trabalhadores numa fachada" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/s1.jpg" alt="Moradia moderna iluminada" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/g2.jpg" alt="Carpinteiro em obra" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/s2.jpg" alt="Edifício de apartamentos" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/g3.jpg" alt="Estaleiro" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/s3.jpg" alt="Fachada de moradia branca" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/g4.jpg" alt="Escavadora" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/hero.jpg" alt="Estaleiro de obra visto de cima" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/about.jpg" alt="Equipa de obra alinhada no estaleiro" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/h2.jpg" alt="Escavadora numa obra" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/a2.jpg" alt="Planta de arquitetura" width="1600" height="1067" loading="lazy" decoding="async"></figure><figure class="rv"><img src="img/g1.jpg" alt="Trabalhadores numa fachada" width="1600" height="1067" loading="lazy" decoding="async"></figure></div></section></main>
+<footer class="site-foot"><div class="wrap">
+<div class="fgrid4">
+<div><a class="logo" href="index.html"><span class="lg">PRUMO<sup>®</sup></span></a><p class="muted" style="margin-top:16px;max-width:32ch">Construção de moradias, reabilitação de edifícios e gestão de obra, com engenharia própria.</p></div>
+<div><h4>Páginas</h4><ul><li><a href="index.html">Início</a></li><li><a href="sobre.html">Sobre</a></li><li><a href="servicos.html">Serviços</a></li><li><a href="galeria.html">Galeria</a></li><li><a href="contacto.html">Contacto</a></li></ul></div>
+<div><h4>Serviços</h4><ul><li><a href="servicos.html">Construção nova</a></li><li><a href="servicos.html">Reabilitação</a></li><li><a href="servicos.html">Gestão de obra</a></li></ul></div>
+<div><h4>Contacto</h4><ul><li>Zona Industrial da Cova das Faias, Lote 12, Leiria</li><li><a href="tel:+351244555666">+351 244 555 666</a></li><li><a href="mailto:obras@prumo.pt">obras@prumo.pt</a></li><li><a href="#" aria-label="Instagram (exemplo)">@prumo.construcao</a></li></ul></div>
+</div>
+<div class="fbot"><span>© <span id="y">2026</span> Prumo Construção. Todos os direitos reservados.</span><span class="demo-tag">Template «Prumo» · Beatriz Studio · conteúdo de demonstração</span></div>
+</div></footer>
+<script>
+(function(){
+  var b=document.querySelector('.burger'),m=document.getElementById('menu');
+  if(b&&m){b.addEventListener('click',function(){var o=m.classList.toggle('open');b.setAttribute('aria-expanded',o);document.body.classList.toggle('menu-open',o);});
+    m.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){m.classList.remove('open');b.setAttribute('aria-expanded','false');document.body.classList.remove('menu-open');});});}
+  var h=document.querySelector('.site-head');function sc(){if(h)h.classList.toggle('scrolled',window.scrollY>20);}window.addEventListener('scroll',sc,{passive:true});sc();
+  var els=document.querySelectorAll('.rv');
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target);}});},{threshold:.12});els.forEach(function(x){io.observe(x);});}
+  else els.forEach(function(x){x.classList.add('in');});
+  document.querySelectorAll('form.demo-form').forEach(function(f){f.addEventListener('submit',function(ev){ev.preventDefault();var n=f.querySelector('.form-ok');if(n){n.hidden=false;n.focus();}});});
+  var y=document.getElementById('y');if(y)y.textContent=new Date().getFullYear();
+})();
+</script>
+</body>
+</html>
