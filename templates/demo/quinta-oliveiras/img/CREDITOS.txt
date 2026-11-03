@@ -1,0 +1,13 @@
+Fotografias de demonstração: Unsplash (unsplash.com), licença Unsplash. Substituir pelas fotografias do cliente.
+hero.jpg  photo-1566073771259-6a8506099945
+h2.jpg  photo-1584132967334-10e028bd69f7
+about.jpg  photo-1445019980597-93fa8acb246c
+a2.jpg  photo-1582719478250-c89cae4dc85b
+s1.jpg  photo-1582719478250-c89cae4dc85b
+s2.jpg  photo-1520250497591-112f2f40a3f4
+s3.jpg  photo-1551632436-cbf8dd35adfa
+g1.jpg  photo-1540541338287-41700207dee6
+g2.jpg  photo-1571896349842-33c89424de2d
+g3.jpg  photo-1455587734955-081b22074882
+g4.jpg  photo-1499793983690-e29da59ef1c2
+founder.jpg  photo-1508214751196-bcfd4ca60f91
