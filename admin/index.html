@@ -819,7 +819,7 @@ function viewStaffDrawer(D){
   var R=D.res,msg="Olá "+first(R.staff.name)+"! Dei-te acesso ao painel do estúdio. Entra aqui e cria a tua palavra-passe:\n"+R.link+"\n\nDepois disso o painel abre sozinho neste computador.";
   return '<div class="dh"><div><span class="eb">Equipa</span><h2>'+esc(R.staff.name)+'</h2><p>'+(R.mailed?"Já lhe enviei um email com as instruções.":"Envia-lhe este link.")+' Ela pode usar o link (válido 7 dias) ou simplesmente entrar em beatrizstudio.pt/admin com o email dela.</p></div><button class="ib" data-a="close" aria-label="Fechar">'+IC.close+'</button></div>'+
     '<div class="linkbox"><span style="flex:1">'+esc(R.link)+'</span><button class="btn btn-s btn-sm" data-a="copy" data-txt="'+esc(R.link)+'">Copiar</button></div>'+
-    '<div class="acts"><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(msg)+'">'+IC.wa+'Enviar pelo WhatsApp</a></div>'+
+    '<div class="acts"><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://api.whatsapp.com/send?text='+encodeURIComponent(msg)+'">'+IC.wa+'Enviar pelo WhatsApp</a></div>'+
     (st.demo?'<div class="setup">Modo demonstração: este link é só um exemplo.</div>':'');}
 function viewApp(){var V=(isOwner()?{inicio:viewInicio,agenda:viewHoje,pedidos:viewPedidos,clientes:viewClientes,testemunhos:viewTestemunhos,equipa:viewEquipa}:{inicio:viewInicio,agenda:viewHoje,pedidos:viewPedidos,clientes:viewClientes})[st.view]||viewInicio;
   var perm=window.Notification?Notification.permission:"unsupported";
