@@ -52,3 +52,20 @@ h1.display,h2.display{font-size:clamp(36px,4.8vw,64px)!important}
 
 /* 3 nov: imagens dos projetos começam abaixo da barra do browser */
 .cgal-frame .cgal-track{padding-top:32px;background:#1b1915}
+.x4-dlgc{max-height:calc(100dvh - 40px);overflow:auto}
+.x4-tform{display:grid;gap:14px;width:100%}
+.x4-tform>label,.x4-tmat legend{display:grid;gap:6px;font:500 14px var(--x-sans);color:#fff}
+.x4-tform small{font-weight:400;color:#e9d3d6}
+.x4-tform input:not([type=radio]),.x4-tform textarea{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.07);color:#fff;font:400 16px var(--x-sans)}
+.x4-tform textarea{min-height:110px;resize:vertical}
+.x4-tform input::placeholder,.x4-tform textarea::placeholder{color:rgba(233,211,214,.6)}
+.x4-tform input:focus-visible,.x4-tform textarea:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.x4-tmat{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.x4-tmat legend{margin-bottom:8px;padding:0}
+.x4-tmat label{position:relative;cursor:pointer}
+.x4-tmat input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.x4-tmat span{display:inline-block;padding:9px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.35);font:500 14px var(--x-sans);color:#fff}
+.x4-tmat input:checked+span{background:#fff;color:#5c1a26;border-color:#fff}
+.x4-tmat input:focus-visible+span{outline:2px solid #fff;outline-offset:2px}
+.x4-terr{margin:0;min-height:1em;font-size:13px;color:#ffd5d5}
+.x4-terr:empty{display:none}
