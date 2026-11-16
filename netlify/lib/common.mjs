@@ -68,13 +68,13 @@ export async function notify(s, n) {
 
 /* ---------- emails (Resend) ---------- */
 export const mailReady = () => !!(env("RESEND_API_KEY") && env("MAIL_FROM"));
-export async function sendMail({ to, subject, html, text, replyTo }) {
+export async function sendMail({ to, subject, html, text, replyTo, attachments }) {
   if (!mailReady()) return { ok: false, skipped: true };
   try {
     const r = await fetch(env("MAIL_API_URL") || "https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: "Bearer " + env("RESEND_API_KEY"), "content-type": "application/json" },
-      body: JSON.stringify({ from: env("MAIL_FROM"), to: [to], subject, html, text, reply_to: replyTo || env("REPLY_TO") || "beatrizmachadostudio@gmail.com" })
+      body: JSON.stringify({ from: env("MAIL_FROM"), to: [to], subject, html, text, reply_to: replyTo || env("REPLY_TO") || "beatrizmachadostudio@gmail.com", ...(attachments && attachments.length ? { attachments } : {}) })
     });
     if (!r.ok) console.error("Resend", r.status, await r.text().catch(() => ""));
     return { ok: r.ok };
@@ -83,26 +83,28 @@ export async function sendMail({ to, subject, html, text, replyTo }) {
     return { ok: false };
   }
 }
-const escH = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+export const escH = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export function mailLayout(title, bodyHtml, sig) {
-  return `<!doctype html><html><body style="margin:0;background:#F3EDE4;font-family:Helvetica,Arial,sans-serif;color:#1A1A1A">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EDE4;padding:32px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#FBF8F3;border:1px solid #DDD2C2;border-radius:22px">
-<tr><td style="padding:30px 34px 0;font-size:22px;font-weight:bold;letter-spacing:-0.5px;color:#5C1A26">beatriz studio<span style="color:#5C1A26">.</span></td></tr>
+  return `<!doctype html><html><body style="margin:0;background:#F6E9E6;font-family:Helvetica,Arial,sans-serif;color:#2A1216">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6E9E6;padding:32px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#FFFFFF;border:1px solid #EBD7DA;border-radius:22px">
+<tr><td style="padding:30px 34px 0;font-size:22px;font-weight:bold;letter-spacing:-0.5px;color:#350E17">beatriz studio<span style="color:#E3A58C">.</span></td></tr>
 <tr><td style="padding:22px 34px 34px"><h1 style="font-size:22px;margin:0 0 16px;font-weight:600;line-height:1.25">${escH(title)}</h1>${bodyHtml}${sig ? signatureHtml(sig) : ""}</td></tr>
-</table><p style="font-size:11px;color:#5B534B;margin:16px 0 0">Websites · Identidade Visual · Templates · beatrizstudio.pt</p></td></tr></table></body></html>`;
+</table><p style="font-size:11px;color:#74545A;margin:16px 0 0">Websites · Identidade Visual · Templates · beatrizstudio.pt</p></td></tr></table></body></html>`;
 }
 export const mailText = (t) => String(t || "").split(/\n{2,}/).map((para) => `<p style="font-size:15px;line-height:1.6;margin:0 0 14px;color:#3A332D">${escH(para).replace(/\n/g, "<br>")}</p>`).join("");
 export const p = (t) => `<p style="font-size:15px;line-height:1.6;margin:0 0 12px;color:#3D3830">${escH(t)}</p>`;
+// Parágrafo com HTML já seguro (só para texto fixo; dados do cliente passam por escH).
+export const pH = (h) => `<p style="font-size:15px;line-height:1.6;margin:0 0 12px;color:#3D3830">${h}</p>`;
 export const codeBox = (c) => `<p style="font-size:34px;letter-spacing:10px;font-weight:bold;margin:8px 0 18px;color:#15130F">${escH(c)}</p>`;
 export function rows(list) {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #DDD2C2;margin:6px 0 16px">${list
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EBD7DA;margin:6px 0 16px">${list
     .filter((r) => r[1])
-    .map((r) => `<tr><td style="padding:9px 0;border-bottom:1px solid #DDD2C2;font-size:12px;color:#5B534B;text-transform:uppercase;letter-spacing:1px;width:120px;vertical-align:top">${escH(r[0])}</td><td style="padding:9px 0;border-bottom:1px solid #DDD2C2;font-size:14px">${escH(r[1])}</td></tr>`)
+    .map((r) => `<tr><td style="padding:9px 0;border-bottom:1px solid #EBD7DA;font-size:12px;color:#74545A;text-transform:uppercase;letter-spacing:1px;width:120px;vertical-align:top">${escH(r[0])}</td><td style="padding:9px 0;border-bottom:1px solid #EBD7DA;font-size:14px">${escH(r[1])}</td></tr>`)
     .join("")}</table>`;
 }
 export const button = (href, label) =>
-  `<p style="margin:18px 0 4px"><a href="${escH(href)}" style="display:inline-block;background:#A65135;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:bold;padding:13px 22px;border-radius:999px">${escH(label)}</a></p>`;
+  `<p style="margin:18px 0 4px"><a href="${escH(href)}" style="display:inline-block;background:#350E17;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:bold;padding:13px 22px;border-radius:999px">${escH(label)}</a></p>`;
 export const siteUrl = (req) => env("SITE_URL") || new URL(req.url).origin;
 
 /* ---------- Stripe (pagamentos) ---------- */
@@ -132,16 +134,16 @@ export async function getSignature(s, senderName) {
   if (senderName) sig.nome = senderName;
   return sig;
 }
-const linkS = (href, t) => `<a href="${escH(href)}" style="color:#9A4B2E;text-decoration:none">${escH(t)}</a>`;
+const linkS = (href, t) => `<a href="${escH(href)}" style="color:#8A3446;text-decoration:none">${escH(t)}</a>`;
 export function signatureHtml(g) {
   const site = String(g.site || "").replace(/^https?:\/\//, "");
   const ig = String(g.instagram || "").replace(/^@/, "");
   const bits = [g.email && linkS("mailto:" + g.email, g.email), g.telefone && linkS("tel:" + String(g.telefone).replace(/\s/g, ""), g.telefone), site && linkS("https://" + site, site), ig && linkS("https://instagram.com/" + ig, "@" + ig)].filter(Boolean);
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:1px solid #DDD2C2;padding-top:16px;width:100%"><tr><td style="padding-top:16px">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:1px solid #EBD7DA;padding-top:16px;width:100%"><tr><td style="padding-top:16px">
 <div style="font-size:17px;font-weight:bold;letter-spacing:-0.3px;color:#1A1A1A">${escH(g.nome || "")}<span style="color:#C26A4A">.</span></div>
-${g.cargo ? `<div style="font-size:13px;color:#5B534B;margin-top:3px">${escH(g.cargo)}</div>` : ""}
+${g.cargo ? `<div style="font-size:13px;color:#74545A;margin-top:3px">${escH(g.cargo)}</div>` : ""}
 ${bits.length ? `<div style="font-size:13px;margin-top:8px;line-height:1.7">${bits.join(' <span style="color:#CBBDA9">·</span> ')}</div>` : ""}
-${g.frase ? `<div style="font-size:12.5px;color:#5B534B;margin-top:8px;font-style:italic">${escH(g.frase)}</div>` : ""}
+${g.frase ? `<div style="font-size:12.5px;color:#74545A;margin-top:8px;font-style:italic">${escH(g.frase)}</div>` : ""}
 </td></tr></table>`;
 }
 export function signatureText(g) {
