@@ -12,10 +12,15 @@ A Claude prepara; **a Beatriz revê, aprova e envia**. O painel não envia nenhu
    - entrega a **avaliação interna** (não vai para o cliente);
    - entrega o **bloco JSON** do relatório (formato abaixo).
 4. **No painel**, cola o JSON em «Rascunho do relatório» e carrega em **Guardar rascunho** → estado **Rascunho pronto**.
-5. **Lê o PDF** («Ver PDF (rascunho)»). Corrige o que for preciso diretamente no JSON e guarda outra vez.
-6. **Aprova** («Aprovar diagnóstico») → estado **Aprovado**. Qualquer alteração depois disto anula a aprovação.
-7. **Envia** («Enviar ao cliente por email»): segue o email de entrega com o PDF em anexo → estado **Entregue**. Se o serviço de email falhar, o painel avisa e o estado não muda.
-8. Depois, marca à mão: **Proposta pedida**, **Convertido** ou **Fechado**.
+5. **Junta as imagens** (opcional), em «Imagens do relatório»: a captura do site ou Instagram do cliente (aparece na capa) e a imagem da sugestão visual. Aceita JPG, PNG ou WebP; o painel reduz o tamanho sozinho.
+6. **Lê o PDF** («Ver PDF (rascunho)»). Corrige o que for preciso diretamente no JSON e guarda outra vez.
+7. **Aprova** («Aprovar diagnóstico») → estado **Aprovado**. Qualquer alteração depois disto (texto ou imagens) anula a aprovação.
+8. **Envia** («Enviar ao cliente por email»): segue o email de entrega com o PDF em anexo → estado **Entregue**. Se o serviço de email falhar, o painel avisa e o estado não muda.
+9. Depois, marca à mão: **Proposta pedida**, **Convertido** ou **Fechado**.
+
+## O PDF
+
+Usa os tipos de letra da marca (Outfit, Inclusive Sans e Instrument Serif Italic), as cores do Brandbook, o logótipo e o teu retrato no fecho. Sem imagens carregadas, a capa mostra o índice do documento. A captura só deve mostrar o que é público no site ou perfil do cliente.
 
 ## Estados
 

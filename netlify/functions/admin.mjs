@@ -352,7 +352,7 @@ export default async (req) => {
         return json({ ok: true, item: upd });
       }
       /* diagnóstico digital: estados, rascunho, aprovação (obrigatória), PDF e envio ao cliente */
-      if (a === "diag-status" || a === "diag-draft" || a === "diag-approve" || a === "diag-pdf" || a === "diag-send") {
+      if (a === "diag-status" || a === "diag-draft" || a === "diag-image" || a === "diag-approve" || a === "diag-pdf" || a === "diag-send") {
         const { id, lead } = await loadLead();
         if (!lead || lead.type !== "diagnostico") return json({ error: "Pedido de diagnóstico não encontrado" }, 404);
         const diag = lead.diag || { status: "new", log: [] };
@@ -374,6 +374,28 @@ export default async (req) => {
           const next = logState({ ...diag, report, reportHash: reportHash(report), reportAt: now, approved: null }, "draft_ready", me.name);
           return json({ ok: true, item: await put({ diag: next }) });
         }
+        if (a === "diag-image") {
+          // imagens do relatório: captura da presença atual (capa) e imagem da sugestão visual
+          const kind = body.kind === "sugestao" ? "sugestao" : body.kind === "captura" ? "captura" : "";
+          if (!kind) return json({ error: "Imagem desconhecida." }, 400);
+          const images = { ...(diag.images || {}) }, key = "diagimg/" + id + "-" + kind;
+          if (body.data == null || body.data === "") { await store.delete(key); delete images[kind]; }
+          else {
+            const m = /^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data));
+            if (!m) return json({ error: "A imagem tem de ser JPG ou PNG." }, 400);
+            const buf = Buffer.from(m[2], "base64");
+            const okMagic = m[1] === "image/png" ? buf.subarray(0, 4).toString("hex") === "89504e47" : buf[0] === 0xff && buf[1] === 0xd8;
+            if (!okMagic) return json({ error: "O ficheiro não parece ser uma imagem válida." }, 400);
+            if (buf.length > 1500000) return json({ error: "A imagem é demasiado grande (máx. 1,5 MB)." }, 413);
+            await store.setJSON(key, { mime: m[1], b64: m[2] });
+            images[kind] = { at: now, kb: Math.round(buf.length / 1024) };
+          }
+          // mudar uma imagem altera o documento: a aprovação anterior deixa de valer
+          const wasApproved = diag.status === "approved";
+          let next = { ...diag, images, approved: null };
+          if (wasApproved) next = logState(next, "draft_ready", me.name);
+          return json({ ok: true, item: await put({ diag: next }), reapprove: !!diag.approved });
+        }
         if (!diag.report) return json({ error: "Ainda não há rascunho guardado para este diagnóstico." }, 400);
         if (a === "diag-approve") {
           if (body.confirm !== true) return json({ error: "Confirma que leste e reviste o diagnóstico antes de o aprovar." }, 400);
@@ -381,7 +403,8 @@ export default async (req) => {
           return json({ ok: true, item: await put({ diag: next }) });
         }
         const sig = await getSignature(store);
-        const pdfOf = async () => Buffer.from(await diagPdf(lead, diag.report, { date: (diag.approved && diag.approved.at) || now, draft: !isApproved(diag), sig, site: siteUrl(req) })).toString("base64");
+        const loadImg = async (kind) => { if (!(diag.images && diag.images[kind])) return null; const r = await store.get("diagimg/" + id + "-" + kind, { type: "json" }); return r && r.b64 ? { mime: r.mime, bytes: Buffer.from(r.b64, "base64") } : null; };
+        const pdfOf = async () => Buffer.from(await diagPdf(lead, diag.report, { date: (diag.approved && diag.approved.at) || now, draft: !isApproved(diag), sig, site: siteUrl(req), images: { captura: await loadImg("captura"), sugestao: await loadImg("sugestao") } })).toString("base64");
         const filename = "Diagnostico-Digital-" + String(lead.marca || lead.nome || "cliente").normalize("NFD").replace(/[^\w ]/g, "").trim().replace(/\s+/g, "-").slice(0, 50) + ".pdf";
         if (a === "diag-pdf") return json({ ok: true, pdf: await pdfOf(), filename, draft: !isApproved(diag) });
         // envio: só com a versão aprovada pela Beatriz; nunca um rascunho por rever
@@ -518,6 +541,7 @@ export default async (req) => {
     if (col === "leads") {
       const lead = await store.get("leads/" + id, { type: "json" });
       if (lead && lead.userId) await store.delete("uleads/" + lead.userId + "/" + id);
+      if (lead && lead.type === "diagnostico") { await store.delete("diagimg/" + id + "-captura"); await store.delete("diagimg/" + id + "-sugestao"); }
     }
     await store.delete(col + "/" + id);
     return json({ ok: true });
