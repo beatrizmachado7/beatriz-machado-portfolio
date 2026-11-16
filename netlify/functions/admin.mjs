@@ -28,6 +28,56 @@ const stripMoney = (l) => { const o = { ...l }; MONEY.forEach((k) => delete o[k]
 const mine = (me) => (a) => (a.uid || "owner") === me.uid;
 const memberMe = (st) => ({ uid: st.id, role: "member", name: st.name, email: st.email });
 
+/* ---------- tráfego pago: Meta Ads e Google Ads (só leitura) ---------- */
+const META_LEADS = ["lead", "onsite_conversion.lead_grouped", "offsite_conversion.fb_pixel_lead"];
+const metaAct = (d, types) => { const A = d.actions || []; for (const t of types) { const x = A.find((a) => a.action_type === t); if (x) return +x.value || 0; } return 0; };
+const metaNorm = (d) => ({ spend: +d.spend || 0, impressions: +d.impressions || 0, reach: +d.reach || 0, clicks: +(d.inline_link_clicks || d.clicks) || 0,
+  leads: metaAct(d, META_LEADS), conversations: metaAct(d, ["onsite_conversion.messaging_conversation_started_7d"]) });
+async function metaAds(since, until) {
+  const token = env("META_ACCESS_TOKEN"), acct = String(env("META_AD_ACCOUNT_ID") || "").replace(/\D/g, "");
+  if (!token || !acct) return { configured: false };
+  const v = env("META_API_VERSION") || "v26.0", base = `https://graph.facebook.com/${v}/act_${acct}/insights`, tr = JSON.stringify({ since, until });
+  const q = async (params) => {
+    const r = await fetch(base + "?" + new URLSearchParams({ ...params, time_range: tr, limit: "500", access_token: token }));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error) throw new Error((j.error && j.error.message) || "Erro da Meta " + r.status);
+    return j.data || [];
+  };
+  const F = "spend,impressions,clicks,inline_link_clicks,actions";
+  try {
+    const [daily, camps, total] = await Promise.all([
+      q({ fields: F, level: "account", time_increment: "1" }),
+      q({ fields: "campaign_id,campaign_name," + F, level: "campaign" }),
+      q({ fields: F, level: "account" })
+    ]);
+    return { configured: true, total: total[0] ? metaNorm(total[0]) : null, daily: daily.map((d) => ({ date: d.date_start, ...metaNorm(d) })), campaigns: camps.map((c) => ({ id: c.campaign_id, name: c.campaign_name, ...metaNorm(c) })) };
+  } catch (e) { console.error("Meta Ads", e); return { configured: true, error: e.message }; }
+}
+async function googleAds(since, until) {
+  const dev = env("GOOGLE_ADS_DEVELOPER_TOKEN"), cid = String(env("GOOGLE_ADS_CUSTOMER_ID") || "").replace(/\D/g, ""), rt = env("GOOGLE_ADS_REFRESH_TOKEN"), ci = env("GOOGLE_ADS_CLIENT_ID"), cs = env("GOOGLE_ADS_CLIENT_SECRET");
+  if (!dev || !cid || !rt || !ci || !cs) return { configured: false };
+  try {
+    const tr = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: ci, client_secret: cs, refresh_token: rt, grant_type: "refresh_token" }) });
+    const tok = await tr.json().catch(() => ({}));
+    if (!tok.access_token) throw new Error("O Google não aceitou o acesso (" + (tok.error_description || tok.error || tr.status) + ").");
+    const v = env("GOOGLE_ADS_API_VERSION") || "v26", login = String(env("GOOGLE_ADS_LOGIN_CUSTOMER_ID") || "").replace(/\D/g, "");
+    const h = { authorization: "Bearer " + tok.access_token, "developer-token": dev, "content-type": "application/json", ...(login ? { "login-customer-id": login } : {}) };
+    const run = async (query) => {
+      const r = await fetch(`https://googleads.googleapis.com/${v}/customers/${cid}/googleAds:search`, { method: "POST", headers: h, body: JSON.stringify({ query }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { const d = j.error && (j.error.details || [])[0]; const m = d && d.errors && d.errors[0] && d.errors[0].message; throw new Error(m || (j.error && j.error.message) || "Erro do Google Ads " + r.status); }
+      return j.results || [];
+    };
+    const W = `segments.date BETWEEN '${since}' AND '${until}'`;
+    const g = (m) => ({ spend: (+m.costMicros || 0) / 1e6, impressions: +m.impressions || 0, reach: 0, clicks: +m.clicks || 0, leads: +m.conversions || 0, conversations: 0 });
+    const [days, camps] = await Promise.all([
+      run(`SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM customer WHERE ${W}`),
+      run(`SELECT campaign.id, campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE ${W} AND metrics.impressions > 0`)
+    ]);
+    return { configured: true, daily: days.map((x) => ({ date: x.segments.date, ...g(x.metrics || {}) })), campaigns: camps.map((x) => ({ id: String(x.campaign.id), name: x.campaign.name, ...g(x.metrics || {}) })) };
+  } catch (e) { console.error("Google Ads", e); return { configured: true, error: e.message }; }
+}
+
 async function newSession(store, uid) {
   const token = newToken();
   await store.setJSON("asess/" + sha(token), { uid, exp: Date.now() + SESSION_DAYS * 864e5 });
@@ -162,15 +212,15 @@ export default async (req) => {
     base.stripe = owner ? stripeReady() : false;
     if (owner) { const sk = String(env("STRIPE_SECRET_KEY") || ""); base.stripeMode = sk.startsWith("sk_live") || sk.startsWith("rk_live") ? "live" : sk ? "test" : null; base.stripeWebhook = !!env("STRIPE_WEBHOOK_SECRET"); }
     if (!owner) return json({ ...base, clients: [], projects: [], users: [], notifs: [], testimonials: [], invites: [], boards: [], staff: [] });
-    const [clients, projects, users, notifs, testimonials, invites, boardList, staff] = await Promise.all([
+    const [clients, projects, users, notifs, testimonials, invites, boardList, staff, linkpays] = await Promise.all([
       list(store, "clients/"), list(store, "projects/"), list(store, "users/"), list(store, "notifs/", 60),
-      list(store, "testimonials/"), list(store, "invites/"), list(store, "boards/"), list(store, "staff/")
+      list(store, "testimonials/"), list(store, "invites/"), list(store, "boards/"), list(store, "staff/"), list(store, "linkpays/")
     ]);
     return json({
       ...base, clients: clients.sort(newest), projects: projects.sort(newest),
       users: users.filter((u) => u.status === "active").map(publicUser).sort(newest),
       notifs: notifs.sort(newest), testimonials: testimonials.sort(newest), invites: invites.sort(newest), boards: boardList,
-      staff: staff.map(pubStaff).sort(newest)
+      staff: staff.map(pubStaff).sort(newest), linkpays: linkpays.sort(newest)
     });
   }
 
@@ -290,6 +340,33 @@ export default async (req) => {
         const upd = { ...lead, payments: lead.payments.map((x) => (x.id === pay.id ? { ...x, status: "cancelled" } : x)) };
         await store.setJSON("leads/" + id, upd);
         return json({ ok: true, item: upd });
+      }
+      /* tráfego pago */
+      if (a === "ads") {
+        const d = (x) => (/^\d{4}-\d{2}-\d{2}$/.test(String(x || "")) ? String(x) : null);
+        const since = d(body.since), until = d(body.until);
+        if (!since || !until || since > until) return json({ error: "Datas inválidas." }, 400);
+        const [meta, google] = await Promise.all([metaAds(since, until), googleAds(since, until)]);
+        return json({ ok: true, since, until, meta, google });
+      }
+      /* pagamentos feitos pelos links fixos do Stripe: associar a um pedido */
+      if (a === "linkpay-assign") {
+        const lpId = String(body.lpId || "").replace(/[^\w-]/g, "");
+        const lp = lpId && await store.get("linkpays/" + lpId, { type: "json" });
+        if (!lp) return json({ error: "Pagamento não encontrado" }, 404);
+        if (lp.leadId) return json({ error: "Este pagamento já está associado a um pedido." }, 400);
+        if (lp.status !== "paid") return json({ error: "Este pagamento ainda não foi concluído." }, 400);
+        const { id, lead } = await loadLead();
+        if (!lead) return json({ error: "Pedido não encontrado" }, 404);
+        const kind = ["sinal", "final", "total", "extra"].includes(body.kind) ? body.kind : "total";
+        const pay = { id: "lp" + lpId.slice(-10), kind, amount: lp.amount, desc: lp.product || "Link de pagamento", status: "paid", src: "link", url: "", createdAt: lp.createdAt, paidAt: lp.paidAt, paidOn: lp.paidOn, method: lp.method || "" };
+        const upd = { ...lead, visto: true, payments: [...(lead.payments || []), pay], updatedAt: new Date().toISOString() };
+        if (kind === "sinal") upd.sinalEm = lp.paidOn; else { upd.pago = true; upd.pagoEm = lp.paidOn; }
+        if (!(+upd.valor > 0)) upd.valor = lp.amount;
+        const lp2 = { ...lp, leadId: id, updatedAt: new Date().toISOString() };
+        await store.setJSON("leads/" + id, upd);
+        await store.setJSON("linkpays/" + lpId, lp2);
+        return json({ ok: true, item: upd, linkpay: lp2 });
       }
       /* equipa */
       if (a === "staff-add") {

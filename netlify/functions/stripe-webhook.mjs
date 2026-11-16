@@ -25,7 +25,28 @@ export default async (req) => {
   const s = getCrm();
   let map = ses.payment_link ? await s.get("paylinks/" + ses.payment_link, { type: "json" }) : null;
   if (!map && ses.metadata && ses.metadata.leadId) map = { leadId: ses.metadata.leadId, payId: ses.metadata.payId };
-  if (!map) return json({ ok: true, unknown: true });
+  if (!map) {
+    // Pagamento feito por um dos links fixos (ex.: «Landing Page · Sinal 50%»): guarda-o para a Beatriz o associar a um pedido no painel.
+    if (!ses.payment_link || !ses.id) return json({ ok: true, unknown: true });
+    const key = "linkpays/" + String(ses.id).replace(/[^\w-]/g, "");
+    const prev = await s.get(key, { type: "json" });
+    if (prev && prev.status === "paid") return json({ ok: true });
+    const st = ev.type === "checkout.session.async_payment_failed" ? "failed" : (ses.payment_status === "paid" || ev.type === "checkout.session.async_payment_succeeded") ? "paid" : "waiting";
+    let product = (prev && prev.product) || "";
+    if (!product) { try { const li = await stripe("checkout/sessions/" + ses.id + "/line_items", {}, "GET"); product = (li.data || []).map((x) => x.description).filter(Boolean).join(", "); } catch (e) { console.error(e); } }
+    const cd = ses.customer_details || {}, now = new Date();
+    const rec = { ...(prev || {}), id: String(ses.id).replace(/[^\w-]/g, ""), link: ses.payment_link, amount: Math.round(ses.amount_total || 0) / 100, currency: ses.currency || "eur", product, name: cd.name || "", email: cd.email || "", phone: cd.phone || "", status: st, method: (ses.payment_method_types || [])[0] || "", createdAt: (prev && prev.createdAt) || now.toISOString(), updatedAt: now.toISOString(), ...(st === "paid" ? { paidAt: now.toISOString(), paidOn: lisbonDate(now) } : {}) };
+    await s.setJSON(key, rec);
+    if (st === "paid") {
+      const eur = rec.amount.toLocaleString("pt-PT", { minimumFractionDigits: rec.amount % 1 ? 2 : 0 }) + "€";
+      const who = rec.name || rec.email || "Cliente";
+      await notify(s, { type: "payment", title: "Pagamento recebido por link", sub: `${who} · ${eur}${product ? " · " + product : ""}` });
+      if (env("NOTIFY_EMAIL")) await sendMail({ to: env("NOTIFY_EMAIL"), replyTo: rec.email || undefined, subject: `Pagamento recebido: ${eur} · ${product || "link de pagamento"} · ${who}`,
+        html: mailLayout("Pagamento recebido", rows([["Cliente", rec.name], ["Email", rec.email], ["Telefone", rec.phone], ["Produto", product], ["Valor", eur]]) + p("Abre o painel, em Pagamentos, e associa este pagamento ao pedido do cliente.") + button(siteUrl(req) + "/admin/", "Abrir o painel")),
+        text: `Pagamento recebido: ${eur}\n${who}${rec.email ? " (" + rec.email + ")" : ""}\n${product}\n\nAbre o painel, em Pagamentos, e associa-o ao pedido do cliente.` }).catch((e) => console.error(e));
+    }
+    return json({ ok: true, linkpay: st });
+  }
   const lead = await s.get("leads/" + map.leadId, { type: "json" });
   if (!lead) return json({ ok: true, noLead: true });
   const pay = (lead.payments || []).find((x) => x.id === map.payId);
