@@ -28,11 +28,14 @@ export async function sendTestEmails(to, site, templates) {
   add("Cliente", "Recebi o teu pedido de orçamento",
     mailLayout("Pedido recebido", p(`Olá ${first},`) + p("Obrigada pelo teu pedido. Vou analisar o teu projeto e responder-te pelo WhatsApp ou por email em 24 a 48 horas úteis.") +
       pH("<b>Próximos passos:</b> 1. Analiso o teu pedido (e, se precisar, faço-te algumas perguntas). 2. Envio-te uma proposta com o valor, o que está incluído e o prazo. 3. Se aprovares, pagas 50% para reservar e o resto só na entrega.") + p("Pedir orçamento não te compromete a nada.") + details, sig));
-  const pago = (titulo, corpo) => add("Cliente", "Pagamento recebido: o teu projeto está reservado (" + titulo + ")",
-    mailLayout("Projeto reservado", p(`Olá ${first},`) + corpo.map((x) => p(x)).join("") + p("Obrigada pela confiança!"), sig));
-  pago("sinal", ["Recebi o teu pagamento de 495€, o sinal de 50% do teu projeto (" + svc + "). O teu lugar na minha agenda está reservado.", "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os detalhes e começarmos.", "Os restantes 495€ só são pagos na entrega, quando o projeto estiver pronto."]);
-  pago("plano mensal", ["Recebi o teu pagamento de 59,90€, referente ao 1.º mês de Manutenção Pro (mensal).", "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos tudo e começarmos.", "Nos meses seguintes envio-te o link de pagamento no início de cada mês."]);
-  pago("pagamento total", ["Recebi o teu pagamento de 990€ (" + svc + ").", "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os próximos passos."]);
+  const pago = (titulo, sub, ttl, corpo) => add("Cliente", sub + " (" + titulo + ")",
+    mailLayout(ttl, p(`Olá ${first},`) + corpo.map((x) => p(x)).join("") + p("Obrigada pela confiança!"), sig));
+  pago("sinal", "Pagamento recebido: o teu projeto está reservado", "Projeto reservado", ["Recebi o teu pagamento de 495€, o sinal de 50% do teu projeto (" + svc + "). O teu lugar na minha agenda está reservado.", "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os detalhes e começarmos.", "Os restantes 495€ só são pagos na entrega, quando o projeto estiver pronto."]);
+  pago("pagamento final", "Pagamento recebido · " + svc, "Pagamento recebido", ["Recebi o pagamento final de 495€ (" + svc + "). O teu projeto está pago na totalidade.", "Vou enviar-te todos os ficheiros e acessos ainda hoje ou no próximo dia útil."]);
+  pago("subscrição", "Pagamento recebido · Manutenção Pro (mensal)", "Pagamento recebido", ["Recebi o teu pagamento de 59,90€ (Manutenção Pro (mensal)).", "A partir de agora, o pagamento é feito automaticamente todos os meses no mesmo cartão e envio-te um email sempre que for cobrado.", "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos tudo."]);
+  pago("outro pagamento", "Pagamento recebido · Idioma extra", "Pagamento recebido", ["Recebi o teu pagamento de 15€ (Idioma extra).", "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os próximos passos."]);
+  add("Cliente", "Renovação feita com sucesso · Manutenção Pro (mensal)", mailLayout("Renovação feita", p(`Olá ${first},`) + p("A renovação de Manutenção Pro (mensal) foi feita com sucesso: 59,90€ (dezembro de 2026).") + p("Não precisas de fazer nada. Obrigada por continuares comigo!"), sig));
+  add("Cliente", "Não foi possível renovar: Manutenção Pro (mensal)", mailLayout("Renovação por concluir", p(`Olá ${first},`) + p("Não foi possível cobrar a renovação de Manutenção Pro (mensal) (59,90€, dezembro de 2026).") + p("Normalmente acontece quando o cartão expirou ou não tinha saldo. Para resolver, carrega no botão e paga com um cartão atualizado. Demora menos de um minuto.") + p("Se precisares de ajuda, responde a este email.") + button("https://invoice.stripe.com/exemplo", "Atualizar o pagamento"), sig));
 
   /* 2. Automáticos para a Beatriz */
   const adm = button(site + "/admin/", "Abrir o painel");
@@ -53,8 +56,6 @@ export async function sendTestEmails(to, site, templates) {
     mailLayout("Novo testemunho para aprovar", p("“Exemplo de testemunho: o processo foi simples e o resultado ficou exatamente como imaginava.”") + rows([["Nome", L.nome], ["Empresa", L.marca], ["Projeto", "Website Completo"], ["Pontuação", "5 / 5"]]) + button(site + "/admin/", "Aprovar no painel")));
 
   /* 3. Acesso e conta */
-  add("Conta", "482913 · Confirma a tua conta", mailLayout("Confirma a tua conta", p(`Olá ${first},`) + p("Usa este código para confirmares a tua conta e enviares o teu pedido de orçamento:") + codeBox("482913") + p("O código é válido durante 15 minutos. Se não foste tu, podes ignorar este email."), sig));
-  add("Conta", "482913 · Código para mudar a palavra-passe", mailLayout("Código para mudar a palavra-passe", p(`Olá ${first},`) + p("Usa este código para escolheres uma nova palavra-passe:") + codeBox("482913") + p("O código é válido durante 15 minutos. Se não foste tu, podes ignorar este email."), sig));
   add("Equipa", "Acesso ao painel do Beatriz Studio", mailLayout("Olá Sara!", p("A Beatriz deu-te acesso ao painel do estúdio. Não precisas de criar conta em lado nenhum: carrega no botão, cria a tua palavra-passe e fica feito.") + button(site + "/admin/", "Entrar no painel") + p("Também podes entrar a qualquer momento em " + site + "/admin com o teu email (sara@exemplo.pt).")));
   add("Equipa", "O teu código: 482913", mailLayout("Olá Sara!", p("Este é o teu código para criares a palavra-passe do painel. É válido durante 15 minutos.") + codeBox("482913")));
 
