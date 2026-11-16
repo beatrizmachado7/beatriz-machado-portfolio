@@ -719,18 +719,18 @@ function chart(m,W){var P=paid().filter(function(l){return l.pagoEm.slice(0,7)==
 function barPath(x,y,w,h,r){r=Math.min(r,h);return "M"+x+","+(y+h)+"V"+(y+r)+"Q"+x+","+y+" "+(x+r)+","+y+"H"+(x+w-r)+"Q"+(x+w)+","+y+" "+(x+w)+","+(y+r)+"V"+(y+h)+"Z";}
 
 /* ---------- pedidos ---------- */
-var FILTERS_ALL=[["todos","Todos"],["e-novo","Novo"],["e-sent","Proposta enviada"],["e-prod","Em curso"],["e-done","Concluído"],["e-lost","Perdido"]];
+var FILTERS_ALL=[["todos","Todos"],["e-novo","Novo"],["e-sent","Proposta enviada"],["e-prod","Em curso"],["e-done","Concluído"],["e-lost","Perdido"],["diag","Diagnósticos"]];
 /* 5 estados do pedido: calculados a partir da proposta e dos pagamentos; só "perdido" é marcado à mão */
 var EST={novo:["Novo","new"],sent:["Proposta enviada","rep"],prod:["Em curso","new"],done:["Concluído","ok"],lost:["Perdido",""]};
 function estadoOf(l){var g=stageOf(l);if(g==="done")return "done";if(l.estado==="perdido")return "lost";
   if(g==="prod"||g==="final")return "prod";if(g==="sinal"||(l.quote&&l.quote.sentAt))return "sent";return "novo";}
 var FILTERS_M=[["todos","Todos"],["novos","Novos"],["porresponder","Por responder"],["respondidos","Respondidos"]];
 function FILTERSF(){return isOwner()?FILTERS_ALL:FILTERS_M;}
-function fl(l,f){if(f.indexOf("e-")===0)return isOwner()&&estadoOf(l)===f.slice(2);var g=isOwner()?stageOf(l):"";if(f==="orc")return g==="quote";if(f==="aprov")return g==="sinal";if(f==="prod")return g==="prod";if(f==="final")return g==="final";if(f==="concl")return g==="done";
+function fl(l,f){if(f==="diag")return l.type==="diagnostico";if(f.indexOf("e-")===0)return isOwner()&&estadoOf(l)===f.slice(2);var g=isOwner()?stageOf(l):"";if(f==="orc")return g==="quote";if(f==="aprov")return g==="sinal";if(f==="prod")return g==="prod";if(f==="final")return g==="final";if(f==="concl")return g==="done";
   if(f==="novos")return !l.visto;if(f==="porresponder")return !(l.history&&l.history.length);if(f==="respondidos")return !!(l.history&&l.history.length);return true;}
 function match(l,q){q=q.toLowerCase();return !q||[l.nome,l.email,l.telefone,l.marca,svc(l),l.mensagem].join(" ").toLowerCase().indexOf(q)>-1;}
 var STG={quote:["Orçamento por enviar",""],sinal:["À espera de aprovação","rep"],prod:["Em produção","new"],final:["Pagamento final","rep"],done:["Concluído","ok"]};
-function tags(l){var t=[];if(!l.visto)t.push('<span class="chip new">Novo</span>');var hs=l.history&&l.history.length;
+function tags(l){var t=[];if(!l.visto)t.push('<span class="chip new">Novo</span>');if(l.type==="diagnostico")t.push('<span class="chip rep">Diagnóstico · '+esc(DGS[(l.diag&&l.diag.status)||"new"]||"Novo")+'</span>');var hs=l.history&&l.history.length;
   if(!isOwner()){if(hs)t.push('<span class="chip rep">Respondido</span>');return t.join("");}
   var e=estadoOf(l),S=EST[e];if(e!=="novo")t.push('<span class="chip '+S[1]+'">'+S[0]+(e==="done"||e==="prod"?" · "+eur(paidSum(l)):"")+'</span>');return t.join("");}
 function paidSum(l){return paysOf(l).filter(function(p){return p.status==="paid";}).reduce(function(a,p){return a+p.amount;},0)||(l.pago?+l.valor||0:0);}
@@ -776,6 +776,25 @@ function templates(){var S={};st.data.templates.filter(function(t){return String
   return L.filter(function(t){return !t.deleted;}).sort(function(a,b){return (a.order||99)-(b.order||99);});}
 function fillTpl(s,l,X){return String(s||"").replace(/\{nome\}/g,first(l.nome)).replace(/\{servico\}/g,svc(l).replace(" · "," — ")).replace(/\{valor\}/g,X&&X.valorTxt||(+l.valor>0?eur(l.valor):"[valor]")).replace(/\{link\}/g,X&&X.link||(pendingPay(l)?pendingPay(l).url:LINKPH)).replace(/\{orcamento\}/g,X&&X.orcamento||LINKQ).replace(/\{total\}/g,X&&X.total||"[total]").replace(/\{sinal\}/g,X&&X.sinal||"[50%]").replace(/\{restante\}/g,X&&X.restante||"[restante]").replace(/\{numero\}/g,X&&X.numero||"").replace(/\{validade\}/g,X&&X.validade||"[data de validade]").replace(/\{dias\}/g,X&&X.dias||"15").replace(/\{incluido\}/g,X&&X.incluido||"• [o que está incluído]").replace(/\{prazo\}/g,X&&X.prazo||"[prazo]");}
 var LINKPH="[o link de pagamento entra aqui ao enviar]";
+/* ---------- diagnóstico digital gratuito ---------- */
+var DGS={"new":"Novo",in_review:"Em análise",draft_ready:"Rascunho pronto",approved:"Aprovado",delivered:"Entregue",proposal_requested:"Proposta pedida",converted:"Convertido",closed:"Fechado"};
+var DG_MANUAL=["new","in_review","draft_ready","delivered","proposal_requested","converted","closed"];
+function dgApproved(d){return !!(d&&d.report&&d.approved&&d.approved.hash&&d.approved.hash===d.reportHash);}
+function dgPrompt(l){return "Novo pedido de Diagnóstico Digital Gratuito.\n\nNome: "+l.nome+"\nNegócio: "+l.marca+"\n"+(l.urlKind==="instagram"?"Instagram":"Website")+": "+l.url+"\nObjetivo indicado pela cliente: "+l.mensagem+"\n\nSegue o fluxo «Diagnóstico Digital — rascunho para o painel»: analisa apenas o que conseguires ver, prepara a avaliação interna e, no fim, dá-me o bloco JSON do relatório para eu colar no painel.";}
+function viewDiag(l){var d=l.diag||{status:"new"},r=d.report,ap=dgApproved(d),sent=d.status==="delivered"||!!d.deliveredAt;
+  var o='<div class="sec"><h3>Diagnóstico digital <span class="chip '+(ap?"ok":"rep")+'">'+esc(DGS[d.status]||d.status)+'</span></h3>';
+  o+='<p class="muted" style="margin:0 0 12px;font-size:14px">1. Prepara o rascunho com a Claude. 2. Cola aqui o bloco JSON e guarda. 3. Lê o PDF e aprova. 4. Envia ao cliente. Nada é enviado sem a tua aprovação.</p>';
+  o+='<div class="acts" style="margin:0 0 14px"><button class="btn btn-s btn-sm" data-a="diag-copy">Copiar pedido para a Claude</button></div>';
+  o+='<label class="sr" for="dgjson">Rascunho do relatório (JSON)</label><textarea class="in" id="dgjson" rows="'+(r?6:4)+'" spellcheck="false" style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px" placeholder="Cola aqui o bloco JSON preparado pela Claude: { &quot;introducao&quot;: … }">'+esc(r?JSON.stringify(r,null,2):"")+'</textarea>';
+  o+='<div class="acts" style="margin:10px 0 0"><button class="btn btn-p btn-sm" data-a="diag-draft">'+(r?"Guardar alterações ao rascunho":"Guardar rascunho")+'</button>'+(r?'<button class="btn btn-s btn-sm" data-a="diag-pdf">Ver PDF'+(ap?"":" (rascunho)")+'</button>':'')+'</div>';
+  if(r){o+='<dl class="kv" style="margin-top:14px"><dt>Melhorias</dt><dd>'+r.melhorias.map(function(m,i){return (i+1)+". "+esc(m.titulo);}).join("<br>")+'</dd>'+(r.servico?'<dt>Serviço sugerido</dt><dd>'+esc(r.servico.nome)+(r.servico.preco?" · "+esc(r.servico.preco):"")+'</dd>':'')+'<dt>Analisado</dt><dd>'+r.materiais.map(esc).join("<br>")+'</dd><dt>Email</dt><dd><b>'+esc(r.email.assunto)+'</b><p class="msg">'+esc(r.email.texto)+'</p></dd></dl>';
+    o+='<div class="acts" style="margin:12px 0 0">'+(ap?'<span class="chip ok">Aprovado por '+esc(first(d.approved.by))+' · '+esc(dShort(d.approved.at,true))+'</span>':'<button class="btn btn-p btn-sm" data-a="diag-approve">Aprovar diagnóstico</button>')+'<button class="btn '+(ap?"btn-p":"btn-s")+' btn-sm" data-a="diag-send"'+(ap?"":" disabled title=\"Aprova primeiro o diagnóstico\"")+'>'+(sent?"Enviar outra vez por email":"Enviar ao cliente por email")+'</button></div>';}
+  o+='<div class="acts" style="margin:16px 0 0;align-items:center"><label for="dgst" style="font-size:13.5px;font-weight:600">Estado</label><select class="in" id="dgst" style="width:auto;min-width:190px">'+DG_MANUAL.map(function(k){return '<option value="'+k+'"'+(k===d.status?" selected":"")+'>'+DGS[k]+'</option>';}).join("")+(d.status==="approved"?'<option value="approved" selected>Aprovado</option>':'')+'</select><button class="btn btn-s btn-sm" data-a="diag-status">Mudar estado</button></div>';
+  if(l.mail&&l.mail.ack==="failed")o+='<p class="muted" style="margin:12px 0 0;font-size:13.5px">Atenção: o email automático de confirmação não chegou a ser enviado a este cliente (o serviço de email deu erro).</p>';
+  return o+'</div>';
+}
+function dgCall(body,okMsg){var id=st.drawer&&st.drawer.id;if(!id)return Promise.resolve();body.id=id;
+  return api("POST","",body).then(function(j){if(j.item){var L=st.data.leads,k=L.findIndex(function(x){return x.id===id;});if(k>-1)L[k]=j.item;}if(okMsg)toast(okMsg);render();return j;}).catch(function(e){toast(e.message);});}
 function viewLead(l){
   var wn=waNum(l.telefone),T=templates(),hist=(l.history||[]).slice().reverse();
   var o='<div class="dh"><div><span class="eb">Pedido · '+esc(dShort(l.createdAt,true))+'</span><h2>'+esc(l.nome||"Sem nome")+'</h2><p>'+esc(svc(l))+'</p></div><button class="ib" data-a="close" aria-label="Fechar">'+IC.close+'</button></div>';
@@ -784,7 +803,9 @@ function viewLead(l){
     (l.marca?'<dt>Marca</dt><dd>'+esc(l.marca)+'</dd>':'')+
     (l.categoria?'<dt>Serviço</dt><dd><b>'+esc(l.categoria)+'</b></dd><dt>Opção</dt><dd><b>'+esc(l.subcategoria||"—")+'</b></dd>':l.plano?'<dt>Plano</dt><dd><b>'+esc(l.plano)+'</b></dd>':'<dt>Serviço</dt><dd>'+esc(l.servico||"—")+'</dd>')+
     (l.extras?'<dt>Extras</dt><dd>'+esc(l.extras)+'</dd>':'')+(l.total?'<dt>Total indicado</dt><dd>'+esc(l.total)+'</dd>':'')+(l.orcamento?'<dt>Orçamento</dt><dd>'+esc(l.orcamento)+'</dd>':'')+(l.prazo?'<dt>Prazo</dt><dd>'+esc(l.prazo)+'</dd>':'')+
-    '<dt>Mensagem</dt><dd>'+(l.mensagem?'<p class="msg">'+esc(l.mensagem)+'</p>':'<span class="muted">Sem mensagem.</span>')+'</dd></dl></div>';
+    (l.url?'<dt>'+(l.urlKind==="instagram"?"Instagram":"Website")+'</dt><dd><a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer">'+esc(l.url)+'</a></dd>':'')+
+    '<dt>'+(l.type==="diagnostico"?"Objetivo":"Mensagem")+'</dt><dd>'+(l.mensagem?'<p class="msg">'+esc(l.mensagem)+'</p>':'<span class="muted">Sem mensagem.</span>')+'</dd></dl></div>';
+  if(l.type==="diagnostico"&&isOwner())o+=viewDiag(l);
   o+=isOwner()?viewFunnel(l):viewFree(l,["tpl-recebido","tpl-info","tpl-agora-nao"],true);
   if(isOwner())o+='<details class="sec more"'+(st.moreOpen?" open":"")+'><summary>Escrever outra mensagem</summary>'+viewFree(l,null,false)+'</details>';
   o+='<div class="sec"><h3>Mensagens enviadas <span class="muted" style="font:600 13px var(--sans)">'+hist.length+'</span></h3>'+(hist.length?'<ul class="hist">'+hist.map(function(h){return '<li><small>'+(h.via==="email"?"Email":h.via==="whatsapp"?"WhatsApp":"Mensagem")+(h.by?" por "+esc(first(h.by)):"")+' · '+esc(dShort(h.at,true))+(h.subject?' · '+esc(h.subject):'')+'</small>'+esc(h.text)+'</li>';}).join("")+'</ul>':'<p class="muted" style="margin:0;font-size:14px">Ainda não respondeste a este pedido.</p>')+'</div>';
@@ -1130,6 +1151,12 @@ document.addEventListener("click",function(ev){
     a.disabled=true;a.textContent="A enviar…";
     sendMsg(L,"email",sj,tx,tp).then(function(){st.tpl=null;st.msg=null;st.subj=null;render();toast("Email enviado para "+L.email+".");})
       .catch(function(e){toast("Não foi possível enviar: "+e.message);render();});return;}
+  if(act==="diag-copy"){var lc=byId("leads",st.drawer.id);if(lc){try{navigator.clipboard.writeText(dgPrompt(lc)).then(function(){toast("Copiado. Cola na conversa com a Claude.");},function(){toast("Não foi possível copiar.");});}catch(e){toast("Não foi possível copiar.");}}return;}
+  if(act==="diag-status"){var se=document.getElementById("dgst");if(se)dgCall({action:"diag-status",status:se.value},"Estado atualizado.");return;}
+  if(act==="diag-draft"){var tj=document.getElementById("dgjson");if(!tj||!tj.value.trim()){toast("Cola primeiro o rascunho em JSON.");return;}dgCall({action:"diag-draft",report:tj.value},"Rascunho guardado. Lê o PDF antes de aprovar.");return;}
+  if(act==="diag-approve"){if(confirm("Confirmas que leste o diagnóstico e que tudo o que lá está é verdadeiro e baseado no que foi realmente analisado?"))dgCall({action:"diag-approve",confirm:true},"Diagnóstico aprovado.");return;}
+  if(act==="diag-pdf"){dgCall({action:"diag-pdf"}).then(function(j){if(!j||!j.pdf)return;var bin=atob(j.pdf),u8=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([u8],{type:"application/pdf"}));var w=window.open(url,"_blank");if(!w){var al=document.createElement("a");al.href=url;al.download=j.filename;al.click();}setTimeout(function(){URL.revokeObjectURL(url);},6e4);});return;}
+  if(act==="diag-send"){var ls=byId("leads",st.drawer.id);if(ls&&confirm("Enviar o diagnóstico aprovado, com o PDF em anexo, para "+ls.email+"?"))dgCall({action:"diag-send"},"Diagnóstico enviado ao cliente.");return;}
   if(act==="lead-del"){var LD=byId("leads",st.drawer.id);if(LD&&confirm("Apagar o pedido de "+LD.nome+"? Não dá para desfazer.")){var lid=LD.id;st.drawer=null;remove("leads",lid);}return;}
   /* testemunhos */
   if(act==="inv-new"){openDrawer("invite",null);return;}
