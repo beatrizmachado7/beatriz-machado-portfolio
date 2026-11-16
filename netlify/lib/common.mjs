@@ -126,26 +126,40 @@ export async function stripe(path, params, method = "POST") {
 export const lisbonDate = (d = new Date()) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Lisbon" });
 
 /* ---------- assinatura dos emails ---------- */
-export const DEFAULT_SIG = { nome: "Beatriz Machado", cargo: "Websites · Identidade Visual · Templates", email: "beatrizmachadostudio@gmail.com", telefone: "", site: "beatrizstudio.pt", instagram: "@beatrizstudio.pt", frase: "" };
+export const DEFAULT_SIG = { nome: "Beatriz Machado", cargo: "Beatriz Studio · Websites e identidade visual", email: "beatrizmachadostudio@gmail.com", telefone: "+351 936 507 808", site: "beatrizstudio.pt", instagram: "@beatrizstudio.pt", frase: "" };
+const OLD_CARGO = "Websites · Identidade Visual · Templates";
 export async function getSignature(s, senderName) {
   let sig = null;
   try { sig = await s.get("templates/cfg-signature", { type: "json" }); } catch (e) { console.error(e); }
   sig = { ...DEFAULT_SIG, ...(sig || {}) };
+  // Assinaturas guardadas antes do rebranding: atualiza o cargo antigo e repõe o WhatsApp.
+  if (!sig.cargo || sig.cargo === OLD_CARGO) sig.cargo = DEFAULT_SIG.cargo;
+  if (!sig.telefone) sig.telefone = DEFAULT_SIG.telefone;
   if (senderName) sig.nome = senderName;
   return sig;
 }
 const linkS = (href, t) => `<a href="${escH(href)}" style="color:#8A3446;text-decoration:none">${escH(t)}</a>`;
+// A mesma assinatura do Gmail (rebranding 2026): círculo «b.» bordô + nome, cargo e contactos.
 export function signatureHtml(g) {
-  const site = String(g.site || "").replace(/^https?:\/\//, "");
+  const site = String(g.site || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
   const ig = String(g.instagram || "").replace(/^@/, "");
-  const bits = [g.email && linkS("mailto:" + g.email, g.email), g.telefone && linkS("tel:" + String(g.telefone).replace(/\s/g, ""), g.telefone), site && linkS("https://" + site, site), ig && linkS("https://instagram.com/" + ig, "@" + ig)].filter(Boolean);
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:1px solid #EBD7DA;padding-top:16px;width:100%"><tr><td style="padding-top:16px">
-<div style="font-size:17px;font-weight:bold;letter-spacing:-0.3px;color:#1A1A1A">${escH(g.nome || "")}<span style="color:#C26A4A">.</span></div>
-${g.cargo ? `<div style="font-size:13px;color:#74545A;margin-top:3px">${escH(g.cargo)}</div>` : ""}
-${bits.length ? `<div style="font-size:13px;margin-top:8px;line-height:1.7">${bits.join(' <span style="color:#CBBDA9">·</span> ')}</div>` : ""}
-${g.frase ? `<div style="font-size:12.5px;color:#74545A;margin-top:8px;font-style:italic">${escH(g.frase)}</div>` : ""}
+  const wa = String(g.telefone || "").replace(/\D/g, "");
+  const A = (href, t, bold) => `<a href="${escH(href)}" style="color:#350E17;text-decoration:none${bold ? ";font-weight:bold" : ""}">${escH(t)}</a>`;
+  const dot = '<span style="color:#F0C2AE">&nbsp;&bull;&nbsp;</span>';
+  const bits = [site && A("https://" + site, site, true), wa && A("https://api.whatsapp.com/send?phone=" + wa, "WhatsApp\u00a0" + String(g.telefone).replace(/ /g, "\u00a0")), ig && A("https://www.instagram.com/" + ig + "/", "@" + ig)].filter(Boolean);
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #EBD7DA;width:100%"><tr><td style="padding-top:22px">
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif"><tr>
+<td valign="middle" style="padding:0 18px 0 0"><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>
+<td width="64" height="64" align="center" valign="middle" bgcolor="#350E17" style="width:64px;height:64px;background-color:#350E17;border-radius:32px;font-family:Arial,Helvetica,sans-serif;font-size:30px;line-height:64px;font-weight:bold;color:#FFFFFF;letter-spacing:-1px">b<span style="color:#F0C2AE">.</span></td>
+</tr></table></td>
+<td valign="middle" style="padding:0 0 0 18px;border-left:2px solid #F0C2AE">
+<p style="margin:0;font-size:16px;line-height:20px;font-weight:bold;color:#350E17">${escH(g.nome || "")}</p>
+${g.cargo ? `<p style="margin:2px 0 8px;font-size:13px;line-height:18px;color:#7A4A53">${escH(g.cargo)}</p>` : ""}
+${bits.length ? `<p style="margin:0;font-size:13px;line-height:20px;color:#350E17">${bits.join(dot)}</p>` : ""}
+${g.frase ? `<p style="margin:8px 0 0;font-size:12.5px;line-height:18px;color:#7A4A53;font-style:italic">${escH(g.frase)}</p>` : ""}
+</td></tr></table>
 </td></tr></table>`;
 }
 export function signatureText(g) {
-  return "\n\n--\n" + [g.nome, g.cargo, [g.email, g.telefone, g.site, g.instagram].filter(Boolean).join(" · "), g.frase].filter(Boolean).join("\n");
+  return "\n\n--\n" + [g.nome, g.cargo, [g.site, g.telefone && "WhatsApp " + g.telefone, g.instagram].filter(Boolean).join(" · "), g.frase].filter(Boolean).join("\n");
 }
