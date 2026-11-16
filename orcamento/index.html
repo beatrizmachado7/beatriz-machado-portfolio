@@ -44,6 +44,7 @@ th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding
 .tools{max-width:820px;margin:18px auto 0;display:flex;justify-content:flex-end;position:relative;z-index:1}
 @media (max-width:700px){.sheet{padding:28px 20px;border-radius:22px}.meta,.cond{grid-template-columns:1fr}.num{text-align:left}.tot div{min-width:0;width:100%}
   th.hq,td.hq,th.hu,td.hu{display:none}}
+tr.inc td{padding-top:7px;padding-bottom:7px;color:var(--mut);font-size:.94em}.ck{display:inline-block;width:18px;color:var(--terra,#8A3446);font-weight:700}.incl{font-size:12px;letter-spacing:.04em;color:var(--mut)}
 @media print{body{background:#fff;padding:0}.o,.tools,.banner,.pay .btn{display:none!important}.sheet{border:0;box-shadow:none;padding:0;max-width:none}.pay{background:#fff;color:var(--ink);border:1px solid var(--line)}.pay p{color:var(--mut)}}
 </style></head><body><i class="o a"></i><i class="o b"></i><div id="app"><p class="msg">A carregar o orçamento…</p></div>
 <script>
@@ -61,7 +62,7 @@ function render(D){var q=D.quote,s=D.sinal,f=D.final,half=Math.round(q.total*100
   '<h1>'+esc(D.service||"Proposta")+'</h1><p class="lead">Preparado para '+esc(D.client.nome)+(D.client.marca?' · '+esc(D.client.marca):'')+'.</p>'+
   '<div class="meta"><div><small>Cliente</small><b>'+esc(D.client.nome)+'</b>'+(D.client.email?'<span style="font-size:13px;color:var(--mut)">'+esc(D.client.email)+'</span>':'')+'</div><div><small>Prazo</small><b>'+esc(q.prazo||"A combinar")+'</b></div><div><small>Total</small><b>'+eur(q.total)+'</b></div></div>'+
   '<table><thead><tr><th>Descrição</th><th class="r hq">Qtd.</th><th class="r hu">Preço</th><th class="r">Total</th></tr></thead><tbody>'+
-  q.items.map(function(x){return '<tr><td><b>'+esc(x.d)+'</b>'+(x.det?'<small>'+esc(x.det)+'</small>':'')+'</td><td class="r hq">'+x.q+'</td><td class="r hu">'+eur(x.v)+'</td><td class="r"><b>'+eur(x.q*x.v)+'</b></td></tr>';}).join("")+'</tbody></table>'+
+  q.items.map(function(x){var inc=!(+x.v);return '<tr'+(inc?' class="inc"':'')+'><td>'+(inc?'<span class="ck">✓</span>'+esc(x.d):'<b>'+esc(x.d)+'</b>')+(x.det?'<small>'+esc(x.det)+'</small>':'')+'</td><td class="r hq">'+(inc?'':x.q)+'</td><td class="r hu">'+(inc?'':eur(x.v))+'</td><td class="r">'+(inc?'<span class="incl">Incluído</span>':'<b>'+eur(x.q*x.v)+'</b>')+'</td></tr>';}).join("")+'</tbody></table>'+
   '<div class="tot"><div><p><span>Subtotal</span><span>'+eur(q.total)+'</span></p><p class="big"><span>Total</span><span>'+eur(q.total)+'</span></p></div></div>'+
   '<div class="cond"><div class="step'+(s&&s.status==="paid"?" ok":"")+'"><small>'+(s&&s.status==="paid"?"✓ Pago · ":"1. ")+'Para começar</small><b>'+eur(half)+'</b><span>50% na aprovação do orçamento</span></div>'+
   '<div class="step'+(f&&f.status==="paid"?" ok":"")+'"><small>'+(f&&f.status==="paid"?"✓ Pago · ":"2. ")+'Na entrega</small><b>'+eur(rest)+'</b><span>50% quando o projeto estiver pronto</span></div></div>'+
@@ -74,7 +75,7 @@ function render(D){var q=D.quote,s=D.sinal,f=D.final,half=Math.round(q.total*100
   else if(expired)o+='<div class="pay"><div><h2>Este orçamento expirou</h2><p>Fala comigo para o atualizar: beatrizmachadostudio@gmail.com</p></div></div>';
   else if(s&&s.url)o+='<div class="pay"><div><h2>Para avançar, aprova o orçamento</h2><p>Pagas agora 50% ('+eur(half)+') e o restante só na entrega. Cartão, MB WAY ou Multibanco.</p></div><a class="btn" href="'+esc(s.url)+'">Aprovar e pagar '+eur(half)+'</a></div>';
   o+='<div class="foot"><span>Beatriz Studio · Websites, Identidade Visual e Templates</span><span><a href="mailto:beatrizmachadostudio@gmail.com">beatrizmachadostudio@gmail.com</a> · <a href="/">beatrizstudio.pt</a></span></div></main>'+
-     '<div class="tools"><button class="btn s" onclick="print()">Guardar em PDF</button></div>';
+     '<div class="tools"><a class="btn s" href="/api/quote-pdf?t='+encodeURIComponent(tok)+'" target="_blank" rel="noopener">Descarregar PDF</a></div>';
   app.innerHTML=o;}
 if(window.QUOTE_DATA){render(window.QUOTE_DATA);return;}
 if(!tok){app.innerHTML='<p class="msg">Link incompleto.</p>';return;}
