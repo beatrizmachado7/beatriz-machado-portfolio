@@ -56,7 +56,7 @@ O site mostra beatrizmachadostudio@gmail.com. Os emails automáticos saem de ola
 - `diagnostico-digital/index.html` — a landing page (beatrizstudio.pt/diagnostico-digital/). Usa `assets/site.css` + `assets/diagnostico.css` e `assets/diagnostico.js` (não carrega `site.js`).
 - `netlify/functions/diagnostico.mjs` — recebe o pedido (`/api/diagnostico`), valida no servidor, guarda-o junto dos outros pedidos com o estado «Novo», cria a notificação no painel e envia os emails (confirmação ao cliente + aviso para `NOTIFY_EMAIL`).
 - `netlify/lib/diagnostico.mjs` — estados, validação, formato do rascunho e o PDF do relatório.
-- `netlify/lib/diag-assets.mjs` — tipos de letra da marca, logótipo e retrato usados no PDF (ficheiro gerado).
+- `netlify/lib/diag-assets.mjs` — tipos de letra da marca e logótipo usados no PDF (ficheiro gerado).
 - `netlify/functions/admin.mjs` — ações `diag-status`, `diag-draft`, `diag-approve`, `diag-pdf` e `diag-send` (só a dona).
 - `docs/diagnostico-digital.md` — o fluxo de trabalho com a Claude e o formato do rascunho.
 

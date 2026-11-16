@@ -1,8 +1,8 @@
 // Diagnóstico Digital Gratuito: estados, validação do pedido, rascunho do relatório e PDF com a marca.
 // Regra central: nenhum diagnóstico segue para o cliente sem aprovação da Beatriz (ver canSend).
-import { PDFDocument, rgb, degrees, PDFName, PDFString, pushGraphicsState, popGraphicsState, moveTo, lineTo, closePath, clip, endPath, appendBezierCurve } from "pdf-lib";
+import { PDFDocument, rgb, degrees, PDFName, PDFString, pushGraphicsState, popGraphicsState, moveTo, lineTo, closePath, clip, endPath } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { OUTFIT_400, OUTFIT_600, INCLUSIVE_400, INCLUSIVE_600, ISERIF_ITALIC, LOGO_LIGHT, LOGO_DARK, PORTRAIT } from "./diag-assets.mjs";
+import { OUTFIT_400, OUTFIT_600, INCLUSIVE_400, INCLUSIVE_600, ISERIF_ITALIC, LOGO_LIGHT, LOGO_DARK } from "./diag-assets.mjs";
 import { sha } from "./common.mjs";
 
 export const DIAG_SERVICE = "Diagnóstico Digital Gratuito";
@@ -129,6 +129,17 @@ const ICON = {
 // lead: pedido · report: rascunho normalizado
 // opts: { date, draft, sig: {email, telefone, site, instagram}, site, images: { captura: {bytes, mime}, sugestao: {bytes, mime} } }
 export async function diagPdf(lead, report, opts = {}) {
+  let best = null;
+  for (const k of [1, 0.75, 0.5]) {
+    const r = await composeDiag(lead, report, opts, k);
+    if (!best || r.pages < best.pages) best = r;
+    if (r.pages <= 2 || r.lastFill >= 0.3) return r.bytes;
+  }
+  return best.bytes;
+}
+// k: fator dos espaços entre blocos (1 = normal; menos = mais compacto)
+async function composeDiag(lead, report, opts, k) {
+  const G = (v) => v * k;
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const date = opts.date || new Date().toISOString();
@@ -136,7 +147,7 @@ export async function diagPdf(lead, report, opts = {}) {
   doc.setTitle("Diagnóstico Digital · " + brand + " · Beatriz Studio"); doc.setAuthor("Beatriz Studio"); doc.setCreator("beatrizstudio.pt"); doc.setLanguage("pt-PT");
   const emb = (bytes) => doc.embedFont(bytes, { subset: true });
   const [O4, O6, S4, S6, IT] = await Promise.all([emb(OUTFIT_400()), emb(OUTFIT_600()), emb(INCLUSIVE_400()), emb(INCLUSIVE_600()), emb(ISERIF_ITALIC())]);
-  const [logoL, logoD, portrait] = await Promise.all([doc.embedPng(LOGO_LIGHT()), doc.embedPng(LOGO_DARK()), doc.embedJpg(PORTRAIT())]);
+  const [logoL, logoD] = await Promise.all([doc.embedPng(LOGO_LIGHT()), doc.embedPng(LOGO_DARK())]);
   const embedImg = async (im) => { if (!im || !im.bytes) return null; try { return im.mime === "image/png" ? await doc.embedPng(im.bytes) : await doc.embedJpg(im.bytes); } catch (e) { console.error("diagPdf: imagem", e); return null; } };
   const imgs = opts.images || {}, shot = await embedImg(imgs.captura), mock = await embedImg(imgs.sugestao);
 
@@ -161,7 +172,7 @@ export async function diagPdf(lead, report, opts = {}) {
     return out;
   }
 
-  const W = 595.28, H = 841.89, M = 50, CW = W - 2 * M, TOP = H - 86, BOTTOM = 66;
+  const W = 595.28, H = 841.89, M = 50, CW = W - 2 * M, TOP = H - 74, BOTTOM = 56 - (1 - k) * 12;
   let page, y;
   const text = (t, x, yy, o = {}) => { const f = o.font || S4; page.drawText(tidy(f, t).replace(/\n/g, " "), { x, y: yy, size: o.size || 10, font: f, color: o.color || C.ink, opacity: o.opacity }); };
   const rrect = (x, top, w, h, r, o = {}) => { r = Math.min(r, w / 2, h / 2); page.drawSvgPath(`M ${r} 0 H ${w - r} Q ${w} 0 ${w} ${r} V ${h - r} Q ${w} ${h} ${w - r} ${h} H ${r} Q 0 ${h} 0 ${h - r} V ${r} Q 0 0 ${r} 0 Z`, { x, y: top, color: o.color, borderColor: o.borderColor, borderWidth: o.borderWidth, opacity: o.opacity, borderOpacity: o.borderOpacity }); };
@@ -171,12 +182,6 @@ export async function diagPdf(lead, report, opts = {}) {
     const sc = w / img.width, iw = w, ih = img.height * sc;
     page.pushOperators(pushGraphicsState(), moveTo(x, top), lineTo(x + w, top), lineTo(x + w, top - h), lineTo(x, top - h), closePath(), clip(), endPath());
     page.drawImage(img, { x, y: top - ih, width: iw, height: ih });
-    page.pushOperators(popGraphicsState());
-  };
-  const imageCircle = (img, cx, cy, r) => {
-    const k = 0.5523 * r;
-    page.pushOperators(pushGraphicsState(), moveTo(cx + r, cy), appendBezierCurve(cx + r, cy + k, cx + k, cy + r, cx, cy + r), appendBezierCurve(cx - k, cy + r, cx - r, cy + k, cx - r, cy), appendBezierCurve(cx - r, cy - k, cx - k, cy - r, cx, cy - r), appendBezierCurve(cx + k, cy - r, cx + r, cy - k, cx + r, cy), closePath(), clip(), endPath());
-    page.drawImage(img, { x: cx - r, y: cy - r, width: 2 * r, height: 2 * r });
     page.pushOperators(popGraphicsState());
   };
   // moldura de janela de browser à volta de uma imagem
@@ -226,7 +231,7 @@ export async function diagPdf(lead, report, opts = {}) {
   const newPage = () => { page = doc.addPage([W, H]); y = TOP; };
   const need = (h) => { if (y - h < BOTTOM) newPage(); };
   const para = (t, o = {}) => {
-    const size = o.size || 10.5, lh = o.lh || size * 1.55, font = o.font || S4, x = o.x ?? M, max = o.max || CW - (x - M);
+    const size = o.size || 10, lh = o.lh || size * 1.5, font = o.font || S4, x = o.x ?? M, max = o.max || CW - (x - M);
     const lines = wrap(font, t, size, max);
     lines.forEach((l, i) => {
       // nunca deixa uma única linha sozinha no fim ou no início de uma página
@@ -235,141 +240,147 @@ export async function diagPdf(lead, report, opts = {}) {
       if (l) text(l, x, y - size * 0.82, { size, font, color: o.color || C.ink });
       y -= lh;
     });
-    y -= o.after ?? 8;
+    y -= G(o.after ?? 6);
   };
   const label = (t, x, yy, color) => text(t.toUpperCase(), x, yy, { font: S6, size: 7.2, color: color || C.mut });
   let secN = 0;
   // título de secção: número em itálico + título em Outfit com a última parte em Instrument Serif Italic
   const section = (plain, accent, minAfter = 70) => {
-    need(84 + minAfter); if (y < TOP) y -= 18;
+    need(G(49) + minAfter); if (y < TOP) y -= G(6);
     secN++;
     text(String(secN).padStart(2, "0"), M, y - 9, { font: IT, size: 13, color: C.bordo });
     page.drawLine({ start: { x: M + 22, y: y - 5 }, end: { x: W - M, y: y - 5 }, thickness: 0.7, color: C.pink });
-    y -= 22;
-    const p1 = tidy(O4, plain + " "), w1 = width(O4, p1, 22);
-    text(p1, M, y - 19, { font: O4, size: 22, color: C.ink });
-    text(accent, M + w1, y - 19, { font: IT, size: 25, color: C.bordo });
-    y -= 40;
+    y -= 10 + G(6);
+    const p1 = tidy(O4, plain + " "), w1 = width(O4, p1, 17);
+    text(p1, M, y - 15, { font: O4, size: 17, color: C.ink });
+    text(accent, M + w1, y - 15, { font: IT, size: 19.5, color: C.bordo });
+    y -= 20 + G(7);
   };
 
   newPage();
   // introdução em destaque
-  para(report.introducao, { font: O4, size: 13.5, lh: 21, after: 6 });
+  para(report.introducao, { font: O4, size: 11.5, lh: 17.5, after: 2 });
 
   section("Presença digital", "atual.");
   para(report.presenca);
   if (report.pontosFortes.length) {
-    const inner = CW - 60, L = report.pontosFortes.map((t) => wrap(S4, t, 10, inner));
-    const h = 34 + L.reduce((t, l) => t + l.length * 15 + 6, 0) + 8;
-    need(h + 6); y -= 4;
-    rrect(M, y, CW, h, 12, { color: C.rosa });
-    label("O que já funciona", M + 18, y - 21, C.bordo);
-    let yy = y - 40;
+    const inner = CW - 56, L = report.pontosFortes.map((t) => wrap(S4, t, 9.5, inner));
+    const h = 28 + L.reduce((t, l) => t + l.length * 13.5 + 4, 0) + 6;
+    need(h + 6); y -= 2;
+    rrect(M, y, CW, h, 10, { color: C.rosa });
+    label("O que já funciona", M + 16, y - 18, C.bordo);
+    let yy = y - 34;
     L.forEach((lines) => {
-      page.drawCircle({ x: M + 25, y: yy + 3.4, size: 7, color: C.blush });
-      icon("check", M + 19.6, yy + 8.8, 10.8, C.bordo, 1.4);
-      lines.forEach((l) => { text(l, M + 42, yy, { size: 10 }); yy -= 15; });
-      yy -= 6;
+      page.drawCircle({ x: M + 22, y: yy + 3.2, size: 6, color: C.blush });
+      icon("check", M + 17.4, yy + 7.8, 9.2, C.bordo, 1.3);
+      lines.forEach((l) => { text(l, M + 36, yy, { size: 9.5 }); yy -= 13.5; });
+      yy -= 4;
     });
-    y -= h + 14;
+    y -= h + G(7);
   }
   if (report.materiais.length) {
-    const L = report.materiais.map((t) => wrap(S4, t, 8.5, CW - 14));
-    need(18 + L.reduce((t, l) => t + l.length * 12, 0));
-    label("O que analisei", M, y - 8); y -= 20;
-    L.forEach((lines) => { page.drawCircle({ x: M + 2.5, y: y - 5.2, size: 1.4, color: C.mut }); lines.forEach((l) => { text(l, M + 12, y - 8, { size: 8.5, color: C.mut }); y -= 12; }); });
-    y -= 8;
+    const L = wrap(S4, "Analisei: " + report.materiais.join("  ·  "), 8, CW);
+    need(L.length * 11 + 4);
+    L.forEach((l) => { text(l, M, y - 7, { size: 8, color: C.mut }); y -= 11; });
+    y -= 4;
   }
 
   const PR = { Alta: [C.bordo, C.white], "Média": [C.blush, C.deep], Baixa: [C.pink, C.deep] };
   const cards = report.melhorias.map((m) => {
-    const X = M + 62, inner = W - M - 20 - X;
+    const X = M + 46, inner = W - M - 16 - X;
     const rowsDef = [["eye", "O que observei", m.observacao], ["spark", "Porque importa", m.importancia], ["arrow", "Como melhorar", m.acao]].filter((r) => r[2]);
-    const lines = rowsDef.map((r) => wrap(S4, r[2], 10, inner - 20));
-    const pill = m.prioridade ? "PRIORIDADE " + m.prioridade.toUpperCase() : "", pw = pill ? width(S6, tidy(S6, pill), 6.6) + 16 : 0;
-    const tl = wrap(O6, m.titulo, 14, inner - pw - 10);
-    const h = 22 + tl.length * 18 + 8 + lines.reduce((t, l) => t + 15 + l.length * 15 + 8, 0) + 6;
-    return { m, X, rowsDef, lines, pill, pw, tl, h };
+    const lines = rowsDef.map((r) => wrap(S4, r[2], 9.5, inner - 96));
+    const pill = m.prioridade ? "PRIORIDADE " + m.prioridade.toUpperCase() : "", pw = pill ? width(S6, tidy(S6, pill), 6.2) + 14 : 0;
+    const tl = wrap(O6, m.titulo, 12.5, inner - pw - 10);
+    const h = 15 + tl.length * 16 + 5 + lines.reduce((t, l) => t + l.length * 13.5 + G(4), 0) + 5;
+    return { m, X, inner, rowsDef, lines, pill, pw, tl, h };
   });
-  section("Três melhorias", "prioritárias.", Math.min(cards[0].h + 12, TOP - BOTTOM - 80));
+  section("Três melhorias", "prioritárias.", Math.min(cards[0].h + G(6), TOP - BOTTOM - 60));
   cards.forEach(({ m, X, rowsDef, lines, pill, pw, tl, h }, i) => {
-    need(Math.min(h + 12, TOP - BOTTOM));
+    need(Math.min(h + G(6), TOP - BOTTOM));
     const top = y;
-    rrect(M, top, CW, h, 14, { color: C.rosa });
-    text(String(i + 1).padStart(2, "0"), M + 16, top - 44, { font: IT, size: 36, color: C.bordo });
-    let yy = top - 34;
-    tl.forEach((l) => { text(l, X, yy, { font: O6, size: 14 }); yy -= 18; });
-    if (pill) { const col = PR[m.prioridade] || PR.Baixa; rrect(W - M - 16 - pw, top - 20, pw, 16, 8, { color: col[0] }); text(pill, W - M - 16 - pw + 8, top - 30.6, { font: S6, size: 6.6, color: col[1] }); }
-    yy -= 8;
+    rrect(M, top, CW, h, 12, { color: C.rosa });
+    text(String(i + 1).padStart(2, "0"), M + 14, top - 33, { font: IT, size: 26, color: C.bordo });
+    let yy = top - 26;
+    tl.forEach((l) => { text(l, X, yy, { font: O6, size: 12.5 }); yy -= 16; });
+    if (pill) { const col = PR[m.prioridade] || PR.Baixa; rrect(W - M - 14 - pw, top - 15, pw, 14, 7, { color: col[0] }); text(pill, W - M - 14 - pw + 7, top - 24.3, { font: S6, size: 6.2, color: col[1] }); }
+    yy -= 5;
+    // etiqueta à esquerda e texto à direita, na mesma linha
     rowsDef.forEach((r, k) => {
-      icon(r[0], X, yy + 9.5, 11, C.bordo, 1.3);
-      label(r[1], X + 20, yy, C.bordo); yy -= 15;
-      lines[k].forEach((l) => { text(l, X + 20, yy, { size: 10 }); yy -= 15; });
-      yy -= 8;
+      icon(r[0], X, yy + 8.6, 9.5, C.bordo, 1.2);
+      label(r[1], X + 15, yy + 0.4, C.bordo);
+      lines[k].forEach((l) => { text(l, X + 96, yy, { size: 9.5 }); yy -= 13.5; });
+      yy -= G(4);
     });
-    y = top - h - 12;
+    y = top - h - G(6);
   });
 
   if (report.sugestaoVisual) {
-    const sv = report.sugestaoVisual, ih = mock ? Math.min(250, (CW * mock.height) / mock.width + 20) : 0;
-    section("Sugestão", "visual.", mock ? ih + 60 : 60);
-    if (sv.titulo) para(sv.titulo, { font: O6, size: 12.5, after: 2 });
-    if (sv.descricao) para(sv.descricao);
+    const sv = report.sugestaoVisual;
     if (mock) {
-      need(ih + 28); y -= 4;
-      browserFrame(mock, M, y, CW, ih, "Exemplo ilustrativo", false);
-      y -= ih + 8;
-      text("Exemplo ilustrativo da sugestão. Não representa um projeto final.", M, y - 8, { size: 8, color: C.mut }); y -= 22;
+      const iw = CW * 0.47, ih = Math.min(175, (iw - 2) * mock.height / mock.width + 21), tw = CW - iw - 18;
+      const tl = sv.titulo ? wrap(O6, sv.titulo, 11, tw) : [], dl = sv.descricao ? wrap(S4, sv.descricao, 10, tw) : [];
+      const th = tl.length * 15 + (tl.length ? 3 : 0) + dl.length * 15, bh = Math.max(ih + 13, th);
+      section("Sugestão", "visual.", bh);
+      need(bh);
+      let yy = y - 9;
+      tl.forEach((l) => { text(l, M, yy, { font: O6, size: 11 }); yy -= 15; });
+      if (tl.length) yy -= 3;
+      dl.forEach((l) => { text(l, M, yy, { size: 10 }); yy -= 15; });
+      browserFrame(mock, W - M - iw, y, iw, ih, "Exemplo ilustrativo", false);
+      text("Exemplo ilustrativo. Não representa um projeto final.", W - M - iw, y - ih - 9, { size: 7, color: C.mut });
+      y -= bh + G(8);
+    } else {
+      section("Sugestão", "visual.", 40);
+      if (sv.titulo) para(sv.titulo, { font: O6, size: 11, after: 1 });
+      if (sv.descricao) para(sv.descricao);
     }
   }
 
-  section("Próximos", "passos.", 60);
+  section("Próximos", "passos.", 50);
   report.proximosPassos.forEach((s, i) => {
-    const lines = wrap(S4, s, 10.5, CW - 44), h = Math.max(30, lines.length * 16 + 12);
+    const lines = wrap(S4, s, 10, CW - 34), h = Math.max(20 + G(4), lines.length * 14 + 5 + G(4));
     need(h);
-    if (i < report.proximosPassos.length - 1) page.drawLine({ start: { x: M + 11, y: y - 22 }, end: { x: M + 11, y: y - h - 2 }, thickness: 0.8, color: C.pink });
-    page.drawCircle({ x: M + 11, y: y - 11, size: 11, color: C.bordo });
-    const num = String(i + 1); text(num, M + 11 - width(O6, num, 10) / 2, y - 14.6, { font: O6, size: 10, color: C.white });
-    let yy = y - 14.5; lines.forEach((l) => { text(l, M + 36, yy, { size: 10.5 }); yy -= 16; });
+    if (i < report.proximosPassos.length - 1) page.drawLine({ start: { x: M + 9, y: y - 18 }, end: { x: M + 9, y: y - h - 1 }, thickness: 0.8, color: C.pink });
+    page.drawCircle({ x: M + 9, y: y - 9, size: 9, color: C.bordo });
+    const num = String(i + 1); text(num, M + 9 - width(O6, num, 8.5) / 2, y - 12, { font: O6, size: 8.5, color: C.white });
+    let yy = y - 12.4; lines.forEach((l) => { text(l, M + 28, yy, { size: 10 }); yy -= 14; });
     y -= h;
   });
-  y -= 6;
+  y -= 2;
 
   if (report.servico) {
-    const sv = report.servico, wl = sv.porque ? wrap(S4, sv.porque, 10, CW - 44) : [];
-    const note = wrap(S4, "Esta sugestão é opcional. O diagnóstico é teu e podes aplicar as recomendações da forma que fizer mais sentido para ti.", 8.5, CW - 44);
-    const h = 62 + wl.length * 15 + (wl.length ? 10 : 0) + note.length * 12 + 14;
-    section("Uma solução", "possível.", h);
-    need(h);
+    const sv = report.servico, wl = sv.porque ? wrap(S4, sv.porque, 9.5, CW - 36) : [];
+    const note = wrap(S4, "Sugestão opcional: podes aplicar as recomendações da forma que fizer mais sentido para ti.", 8, CW - 36);
+    const h = 48 + wl.length * 13.5 + (wl.length ? 6 : 0) + note.length * 11 + 10;
+    need(h + G(14)); y -= G(8);
     const top = y;
-    rrect(M, top, CW, h, 14, { color: C.bordo });
-    label("Serviço que pode ajudar", M + 22, top - 24, C.blush);
-    text(sv.nome, M + 22, top - 48, { font: O6, size: 18, color: C.white });
-    if (sv.preco) { const pt = tidy(S6, sv.preco), pw = width(S6, pt, 10) + 22; rrect(W - M - 22 - pw, top - 30, pw, 24, 12, { color: C.blush }); text(pt, W - M - 22 - pw + 11, top - 45.6, { font: S6, size: 10, color: C.deep }); }
-    let yy = top - 70;
-    wl.forEach((l) => { text(l, M + 22, yy, { size: 10, color: C.white }); yy -= 15; });
-    if (wl.length) yy -= 10;
-    note.forEach((l) => { text(l, M + 22, yy, { size: 8.5, color: C.pink }); yy -= 12; });
-    y = top - h - 14;
+    rrect(M, top, CW, h, 12, { color: C.bordo });
+    label("Uma solução possível", M + 18, top - 19, C.blush);
+    text(sv.nome, M + 18, top - 38, { font: O6, size: 15, color: C.white });
+    if (sv.preco) { const pt = tidy(S6, sv.preco), pw = width(S6, pt, 9.5) + 20; rrect(W - M - 18 - pw, top - 20, pw, 22, 11, { color: C.blush }); text(pt, W - M - 18 - pw + 10, top - 34.4, { font: S6, size: 9.5, color: C.deep }); }
+    let yy = top - 56;
+    wl.forEach((l) => { text(l, M + 18, yy, { size: 9.5, color: C.white }); yy -= 13.5; });
+    if (wl.length) yy -= 6;
+    note.forEach((l) => { text(l, M + 18, yy, { size: 8, color: C.pink }); yy -= 11; });
+    y = top - h - G(10);
   }
-  if (report.notaAmbito) { const L = wrap(S4, report.notaAmbito, 8.5, CW); need(22 + L.length * 12); label("Nota de âmbito", M, y - 8); y -= 20; L.forEach((l) => { text(l, M, y - 8, { size: 8.5, color: C.mut }); y -= 12; }); y -= 8; }
+  if (report.notaAmbito) { const L = wrap(S4, "Nota de âmbito: " + report.notaAmbito, 8, CW); need(L.length * 11 + 4); L.forEach((l) => { text(l, M, y - 7, { size: 8, color: C.mut }); y -= 11; }); y -= 4; }
 
   // fecho: convite sem pressão, com o retrato e os contactos
   const sig = opts.sig || {}, site = String(opts.site || "https://beatrizstudio.pt").replace(/\/$/, ""), url = site + "/contacto/";
-  const CH = 128;
-  need(CH + 10); y -= 6;
-  const ctop = y;
-  rrect(M, ctop, CW, CH, 16, { color: C.rosa });
-  imageCircle(portrait, M + 62, ctop - CH / 2, 40);
-  page.drawCircle({ x: M + 62, y: ctop - CH / 2, size: 40, borderColor: C.blush, borderWidth: 2, opacity: 0 });
-  const cx = M + 124;
-  text("Queres conversar sobre isto?", cx, ctop - 38, { font: IT, size: 23, color: C.bordo });
-  wrap(S4, "Se fizer sentido para ti, responde ao email ou fala comigo. Sem compromisso.", 10, W - M - 20 - cx).forEach((l, i) => text(l, cx, ctop - 58 - i * 15, { size: 10 }));
+  const CH = 78;
+  need(CH + G(6)); y -= G(6);
+  const ctop = y, lw = 104, lh = lw * logoD.height / logoD.width;
+  rrect(M, ctop, CW, CH, 14, { color: C.rosa });
+  page.drawImage(logoD, { x: M + 20, y: ctop - CH / 2 - lh / 2, width: lw, height: lh });
+  page.drawLine({ start: { x: M + 142, y: ctop - 16 }, end: { x: M + 142, y: ctop - CH + 16 }, thickness: 0.8, color: C.blush });
+  const cx = M + 160;
+  text("Queres conversar sobre isto?", cx, ctop - 29, { font: IT, size: 18, color: C.bordo });
+  text("Responde ao email ou fala comigo. Sem compromisso.", cx, ctop - 45, { size: 9.5 });
   const contacts = [sig.email, sig.telefone && "WhatsApp " + sig.telefone, url.replace(/^https?:\/\//, "")].filter(Boolean);
-  let fs = 8.8; while (fs > 6.5 && width(S6, tidy(S6, contacts.join("   ·   ")), fs) > W - M - 20 - cx) fs -= 0.3;
-  text(contacts.join("   ·   "), cx, ctop - 84, { font: S6, size: fs, color: C.bordo });
-  text("Beatriz Machado", cx, ctop - 108, { font: IT, size: 15, color: C.bordo });
-  text("Beatriz Studio", cx + width(IT, "Beatriz Machado", 15) + 8, ctop - 107.5, { size: 8.5, color: C.mut });
+  let fs = 8.2; while (fs > 6 && width(S6, tidy(S6, contacts.join("  ·  ")), fs) > W - M - 16 - cx) fs -= 0.2;
+  text(contacts.join("  ·  "), cx, ctop - 62, { font: S6, size: fs, color: C.bordo });
   const annot = doc.context.obj({ Type: "Annot", Subtype: "Link", Rect: [M, ctop - CH, W - M, ctop], Border: [0, 0, 0], A: { Type: "Action", S: "URI", URI: PDFString.of(url) } });
   page.node.set(PDFName.of("Annots"), doc.context.obj([doc.context.register(annot)]));
   y = ctop - CH - 10;
@@ -381,13 +392,13 @@ export async function diagPdf(lead, report, opts = {}) {
     if (i > 0) {
       pg.drawImage(logoD, { x: M, y: H - 49, width: 86, height: 86 * logoD.height / logoD.width });
       pg.drawText(headR, { x: W - M - width(S4, headR, 8), y: H - 45, size: 8, font: S4, color: C.mut });
-      pg.drawLine({ start: { x: M, y: H - 60 }, end: { x: W - M, y: H - 60 }, thickness: 0.6, color: C.pink });
-      pg.drawLine({ start: { x: M, y: 48 }, end: { x: W - M, y: 48 }, thickness: 0.6, color: C.pink });
-      pg.drawText("beatrizstudio.pt", { x: M, y: 33, size: 8, font: S6, color: C.bordo });
+      pg.drawLine({ start: { x: M, y: H - 58 }, end: { x: W - M, y: H - 58 }, thickness: 0.6, color: C.pink });
+      pg.drawLine({ start: { x: M, y: 44 }, end: { x: W - M, y: 44 }, thickness: 0.6, color: C.pink });
+      pg.drawText("beatrizstudio.pt", { x: M, y: 30, size: 8, font: S6, color: C.bordo });
       const n = String(i + 1).padStart(2, "0") + " / " + String(pages.length).padStart(2, "0");
-      pg.drawText(n, { x: W - M - width(S4, n, 8), y: 33, size: 8, font: S4, color: C.mut });
+      pg.drawText(n, { x: W - M - width(S4, n, 8), y: 30, size: 8, font: S4, color: C.mut });
     }
     if (opts.draft) pg.drawText("RASCUNHO", { x: 120, y: 250, size: 86, font: O6, color: i ? C.bordo : C.white, opacity: 0.07, rotate: degrees(45) });
   });
-  return await doc.save();
+  return { bytes: await doc.save(), pages: pages.length, lastFill: (TOP - y) / (TOP - BOTTOM) };
 }

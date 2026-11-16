@@ -20,7 +20,7 @@ A Claude prepara; **a Beatriz revê, aprova e envia**. O painel não envia nenhu
 
 ## O PDF
 
-Usa os tipos de letra da marca (Outfit, Inclusive Sans e Instrument Serif Italic), as cores do Brandbook, o logótipo e o teu retrato no fecho. Sem imagens carregadas, a capa mostra o índice do documento. A captura só deve mostrar o que é público no site ou perfil do cliente.
+Usa os tipos de letra da marca (Outfit, Inclusive Sans e Instrument Serif Italic), as cores do Brandbook e o logótipo. Fica normalmente em 3 páginas (capa + 2); se a última página ficar quase vazia, os espaços são apertados automaticamente. Sem imagens carregadas, a capa mostra o índice do documento. A captura só deve mostrar o que é público no site ou perfil do cliente.
 
 ## Estados
 
