@@ -1,6 +1,8 @@
 // Recebe os pedidos de orçamento do site (com ou sem conta) e guarda-os na base de dados (Netlify Blobs).
 // Proteção anti-spam invisível: campo armadilha, tempo mínimo de preenchimento e limite por IP.
 // Cria uma notificação no painel e envia um email à Beatriz (e ao cliente, se deixou email).
+import { autoQuote, quotePdf, eur, svcName } from "../lib/quote.mjs";
+import { pH, escH } from "../lib/common.mjs";
 import { json, clean, sha, store, sessionUser, limited, notify, sendMail, mailLayout, p, rows, button, env, siteUrl, emailOk, phoneOk, ip, getSignature, signatureText, stripe, payOn } from "../lib/common.mjs";
 
 // Categorias e subcategorias aceites no formulário de orçamento (iguais às do site).
@@ -127,10 +129,22 @@ export default async (req) => {
     return json({ ok: true, id: lead.id, checkout: ses.url });
   }
 
+  // Orçamento automático: para serviços com preço fixo, crio logo a folha de orçamento (página + PDF) e envio-a ao cliente.
+  let auto = null, pdfB64 = "";
+  if (lead.type === "proposta" && lead.email && !/^(nao|não|off|0|false)$/i.test(String(env("ORCAMENTO_AUTOMATICO") || ""))) {
+    try {
+      auto = await autoQuote(s, lead, siteUrl(req));
+      if (auto) {
+        lead.history.push({ at: auto.quote.sentAt, via: "email", by: "Envio automático", subject: "O teu orçamento · " + auto.quote.number, text: "Orçamento " + auto.quote.number + " (" + eur(auto.quote.total) + ") criado e enviado automaticamente com o PDF em anexo." });
+        pdfB64 = Buffer.from(await quotePdf(lead, auto.url)).toString("base64");
+      }
+    } catch (e) { console.error("auto-quote", e); }
+  }
+
   await s.setJSON("leads/" + lead.id, lead);
   if (u) await s.setJSON("uleads/" + u.id + "/" + lead.id, { at: lead.createdAt });
   else if (lead.email) await s.setJSON("eleads/" + sha(lead.email.toLowerCase()) + "/" + lead.id, { at: lead.createdAt });
-  await notify(s, { type: "lead", title: "Novo pedido de orçamento", sub: `${lead.nome} · ${lead.subcategoria || lead.servico.split(" — ")[0]}${lead.total ? " · " + lead.total : ""}`, leadId: lead.id });
+  await notify(s, { type: "lead", title: auto ? "Novo pedido · orçamento enviado" : "Novo pedido de orçamento", sub: `${lead.nome} · ${lead.subcategoria || lead.servico.split(" — ")[0]}${lead.total ? " · " + lead.total : ""}`, leadId: lead.id });
 
   const site = siteUrl(req);
   const details = rows([["Nome", lead.nome], ["WhatsApp", lead.telefone], ["Email", lead.email], ["Negócio", lead.marca], ...(lead.categoria ? [["Categoria", lead.categoria], ["Subcategoria", lead.subcategoria]] : lead.plano ? [["Plano", lead.plano]] : [["Serviço", lead.servico]]), ["Extras", lead.extras],
@@ -139,25 +153,40 @@ export default async (req) => {
   if (env("NOTIFY_EMAIL")) {
     tasks.push(sendMail({
       to: env("NOTIFY_EMAIL"), replyTo: lead.email || undefined,
-      subject: `Novo pedido: ${lead.nome} · ${lead.subcategoria || lead.servico.split(" — ")[0]}${lead.total ? " · " + lead.total : ""}`,
-      html: mailLayout("Novo pedido de orçamento", details + button(site + "/admin/", "Abrir o painel")),
+      subject: `${auto ? "Orçamento " + auto.quote.number + " enviado · " : "Novo pedido: "}${lead.nome} · ${lead.subcategoria || lead.servico.split(" — ")[0]}${lead.total ? " · " + lead.total : ""}`,
+      html: mailLayout("Novo pedido de orçamento", (auto ? pH(`Enviei automaticamente ao cliente o orçamento <b>${auto.quote.number}</b> (${eur(auto.quote.total)}). Podes editá-lo no painel.`) : "") + details + button(site + "/admin/", "Abrir o painel")),
+      attachments: pdfB64 ? [{ filename: auto.quote.number + ".pdf", content: pdfB64 }] : undefined,
       text: `Novo pedido de orçamento\n\n${lead.nome} (${[lead.telefone, lead.email].filter(Boolean).join(", ")})${lead.marca ? "\nNegócio: " + lead.marca : ""}\n${lead.servico}${lead.extras ? "\n" + lead.extras : ""}\n${lead.total}${lead.orcamento ? "\nOrçamento: " + lead.orcamento : ""}${lead.prazo ? "\nPrazo: " + lead.prazo : ""}\n\n${lead.mensagem}\n\n${site}/admin/`
     }));
   }
-  if (lead.email) {
+  if (lead.email && auto) {
+    const sig = await getSignature(s), q = auto.quote, first = lead.nome.split(" ")[0];
+    tasks.push(sendMail({
+      to: lead.email,
+      subject: "O teu orçamento · " + svcName(lead) + " · " + q.number,
+      html: mailLayout("O teu orçamento", p(`Olá ${first},`) +
+        pH(`Obrigada pelo teu pedido. Preparei já o orçamento para <b>${escH(svcName(lead))}</b>: segue em anexo em PDF e também o podes ver online.`) +
+        rows([["Orçamento", q.number], ["Serviço", auto.spec.title || svcName(lead)], ["Total", eur(q.total)], ["Prazo", q.prazo], ["Validade", q.validade + " dias"]]) +
+        (q.notas ? p(q.notas) : "") +
+        pH("<b>Como avançar:</b> aprovas o orçamento na página, pagas 50% para reservar a data e os outros 50% só na entrega. Se quiseres ajustar alguma coisa, responde a este email ou fala comigo pelo WhatsApp.") +
+        button(auto.url, "Ver e aprovar o orçamento"), sig),
+      text: `Olá ${first},\n\nObrigada pelo teu pedido. Preparei já o orçamento ${q.number} para ${svcName(lead)}: ${eur(q.total)}${q.prazo ? " · prazo: " + q.prazo : ""}.\n\nVê e aprova aqui: ${auto.url}\n\nPagas 50% para reservar e os outros 50% só na entrega. Se quiseres ajustar alguma coisa, responde a este email.` + signatureText(sig),
+      attachments: pdfB64 ? [{ filename: "Orcamento-" + q.number + ".pdf", content: pdfB64 }] : undefined
+    }));
+  } else if (lead.email) {
     const sig = await getSignature(s);
     tasks.push(sendMail({
       to: lead.email,
       subject: "Recebi o teu pedido de orçamento",
       html: mailLayout("Pedido recebido", p(`Olá ${lead.nome.split(" ")[0]},`) +
         p("Obrigada pelo teu pedido. Vou analisar o teu projeto e responder-te" + (lead.telefone ? " pelo WhatsApp ou por email" : " por email") + " em 24 a 48 horas úteis.") +
-        p("<b>Próximos passos:</b> 1. Analiso o teu pedido (e, se precisar, faço-te algumas perguntas). 2. Envio-te uma proposta com o valor, o que está incluído e o prazo. 3. Se aprovares, pagas 50% para reservar e o resto só na entrega.") + p("Pedir orçamento não te compromete a nada.") + details, sig),
+        pH("<b>Próximos passos:</b> 1. Analiso o teu pedido (e, se precisar, faço-te algumas perguntas). 2. Envio-te uma proposta com o valor, o que está incluído e o prazo. 3. Se aprovares, pagas 50% para reservar e o resto só na entrega.") + p("Pedir orçamento não te compromete a nada.") + details, sig),
       text: `Olá ${lead.nome.split(" ")[0]},\n\nObrigada pelo teu pedido. Vou analisar o teu projeto e responder-te${lead.telefone ? " pelo WhatsApp ou por email" : " por email"} em 24 a 48 horas úteis.\n\nPróximos passos:\n1. Analiso o teu pedido (e, se precisar, faço-te algumas perguntas).\n2. Envio-te uma proposta com o valor, o que está incluído e o prazo.\n3. Se aprovares, pagas 50% para reservar e o resto só na entrega.\n\nPedir orçamento não te compromete a nada.\n\n${lead.servico}` + signatureText(sig)
     }));
   }
   await Promise.allSettled(tasks);
 
-  return json({ ok: true, id: lead.id });
+  return json({ ok: true, id: lead.id, ...(auto ? { quote: auto.url } : {}) });
 };
 
 export const config = { path: "/api/lead" };
