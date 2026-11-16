@@ -5,7 +5,7 @@ A Claude prepara; **a Beatriz revê, aprova e envia**. O painel não envia nenhu
 
 ## Passo a passo
 
-1. **Chega o pedido.** Aparece no painel (Pedidos → filtro «Diagnósticos») com o estado **Novo**. Recebes um email e o cliente recebe a confirmação de receção.
+1. **Chega o pedido.** Aparece no painel, no separador «Diagnósticos», com o estado **Novo**. Recebes um email e o cliente recebe a confirmação de receção.
 2. **Abre o pedido** e carrega em **«Copiar pedido para a Claude»**. Muda o estado para **Em análise**.
 3. **Na Claude** (projeto *Digital Audit & Sales Strategist*), cola o pedido. A Claude:
    - analisa apenas o que está publicamente acessível (website ou Instagram). Se não conseguir abrir a página, pede capturas de ecrã;
