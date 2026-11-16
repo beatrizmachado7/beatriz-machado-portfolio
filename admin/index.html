@@ -925,7 +925,8 @@ function viewSig(){var g=sig();return '<form class="sec" id="fsig"><h3>Assinatur
   '<label class="fl">Email<input class="in" name="email" type="email" value="'+esc(g.email)+'"></label><label class="fl">WhatsApp<input class="in" name="telefone" value="'+esc(g.telefone)+'"></label>'+
   '<label class="fl">Site<input class="in" name="site" value="'+esc(g.site)+'"></label><label class="fl">Instagram<input class="in" name="instagram" value="'+esc(g.instagram)+'"></label></div>'+
   '<label class="fl" style="margin-top:10px">Frase final (opcional)<input class="in" name="frase" value="'+esc(g.frase)+'" placeholder="Ex.: Respondo normalmente no próprio dia."></label>'+
-  '<span class="fl" style="margin-top:12px">Pré-visualização</span><div id="sigprev">'+sigPreview(g)+'</div><div class="acts" style="margin-top:12px"><button class="btn btn-d btn-sm" type="submit">Guardar assinatura</button></div></form>';}
+  '<span class="fl" style="margin-top:12px">Pré-visualização</span><div id="sigprev">'+sigPreview(g)+'</div><div class="acts" style="margin-top:12px"><button class="btn btn-d btn-sm" type="submit">Guardar assinatura</button></div></form>'+
+  '<div class="sec"><h3>Emails de teste</h3><p class="muted" style="margin:-6px 0 12px;font-size:13.5px">Envia uma cópia de todos os emails do sistema (automáticos, de conta e os modelos), com dados de exemplo e «[TESTE]» no assunto.</p><label class="fl">Enviar para<input class="in" id="test-to" type="email" value="beatrizmachadostudio@gmail.com"></label><div class="acts" style="margin-top:12px"><button class="btn btn-d btn-sm" type="button" data-a="test-emails">Enviar emails de teste</button></div></div>';}
 function viewTplEdit(){var T=templates();
   var bk=st.drawer&&st.drawer.back;
   return (bk?'<div><button class="lk" data-a="open-lead" data-id="'+esc(bk)+'">← Voltar ao pedido</button></div>':'')+'<div class="dh"><div><span class="eb">Pedidos</span><h2>Mensagens prontas</h2><p>Usa <b>{nome}</b>, <b>{servico}</b> e <b>{valor}</b>: são trocados automaticamente pelos dados do pedido.</p></div><button class="ib" data-a="close" aria-label="Fechar">'+IC.close+'</button></div>'+
@@ -1105,6 +1106,10 @@ document.addEventListener("click",function(ev){
   if(act==="fn-send"){fnSend(a);return;}
   if(act==="q-add"){qDraft(byId("leads",st.drawer.id)).items.push({d:"",det:"",q:1,v:""});render();var rr=document.querySelectorAll(".qrow [data-q=d]");if(rr.length)rr[rr.length-1].focus();return;}
   if(act==="q-del"){var QD=qDraft(byId("leads",st.drawer.id));if(QD.items.length>1){QD.items.splice(+a.dataset.i,1);render();}return;}
+  if(act==="test-emails"){if(st.demo){toast("No modo demonstração não se enviam emails.");return;}var to=(document.getElementById("test-to")||{}).value||"beatrizmachadostudio@gmail.com";
+    var TL={id:"teste",nome:"Ana Exemplo",email:"ana@exemplo.pt",categoria:"Websites",subcategoria:"Website Completo",servico:"Websites — Website Completo",valor:990,payments:[]},TX={valorTxt:"990€",link:"https://buy.stripe.com/exemplo",orcamento:location.origin+"/orcamento/?t=exemplo",total:"990€",sinal:"495€",restante:"495€",numero:"ORC-2026-000",dias:"15",validade:"1 de dezembro"};
+    var tp=templates().map(function(t){return {title:t.title,subject:fillTpl(t.subject,TL,TX),text:fillTpl(t.text,TL,TX)};});
+    a.disabled=true;a.textContent="A enviar…";api("POST","",{action:"test-emails",to:to,templates:tp}).then(function(j){toast("Enviados "+j.ok+" de "+j.total+" emails de teste para "+to+".");}).catch(function(e){toast("Erro: "+e.message);}).then(function(){a.disabled=false;a.textContent="Enviar emails de teste";});return;}
   if(act==="q-preview"){openQuotePreview(byId("leads",st.drawer.id));return;}
   if(act==="q-open"){var LQ=byId("leads",st.drawer.id);if(st.demo||!LQ.quote)openQuotePreview(LQ);else window.open(quoteUrl(LQ.quote.token),"_blank","noopener");return;}
   if(act==="q-edit"){st.editQuote=true;st.qd=null;st.fnMsg=null;render();return;}
