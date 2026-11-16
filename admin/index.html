@@ -532,9 +532,17 @@ var LINKS=[
  ["Logótipo",["logótipo","logotipo"],[["total",290,"https://buy.stripe.com/00wcN6a6FfMr2068jW97G0d"],["sinal",145,"https://buy.stripe.com/fZu28s5QpeIn5cidEg97G0e"],["final",145,"https://buy.stripe.com/00wdRa7Yxas748e0Ru97G0f"]]],
  ["Identidade Visual",["identidade visual completa","identidade completa"],[["total",790,"https://buy.stripe.com/fZu9AUemVcAf34aeIk97G0g"],["sinal",395,"https://buy.stripe.com/fZu3cwgv3cAfawC9o097G0h"],["final",395,"https://buy.stripe.com/dRm4gAdiReIngV0as497G0i"]]],
  ["Rebranding",["rebranding"],[["total",1090,"https://buy.stripe.com/cNidRa5Qp9o3eMS8jW97G0j"],["sinal",545,"https://buy.stripe.com/dRm5kE92Bas7awCfMo97G0k"],["final",545,"https://buy.stripe.com/7sY3cw92B6bR48e43G97G0l"]]],
- ["Manutenção Mensal",["manuten"],[["mensal",19.9,"https://buy.stripe.com/28E14odiR6bReMS6bO97G0m"]]]];
-var LK={total:"Total",sinal:"Sinal 50%",final:"Restante 50%",mensal:"Por mês"};
-function linksFor(l){var t=(svc(l)+" "+(l.plano||"")+" "+(l.servico||"")).toLowerCase();return LINKS.filter(function(g){return g[1].some(function(k){return t.indexOf(k)>-1;});});}
+ ["Estacionário",["estacion"],[["total",150,"https://buy.stripe.com/3cIaEYa6F7fV9sydEg97G0r"]]],
+ ["Idioma extra",["idioma"],[["unid",15,"https://buy.stripe.com/5kQdRagv38jZ0W29o097G0n"]]],
+ ["Página extra",["página adicional","página extra","pagina adicional"],[["unid",25,"https://buy.stripe.com/8x27sMemV1VB5cibw897G0o"]]],
+ ["Alterações fora do plano",["alteraç"],[["total",40,"https://buy.stripe.com/28E8wQceN57N2069o097G0p"]]],
+ ["Sistema de reservas",["reserva"],[["total",60,"https://buy.stripe.com/6oU9AUa6Fas77kq8jW97G0q"]]],
+ ["Manutenção Básico",["básico","cuidado do site","manutenção"],[["mensal",19.9,"https://buy.stripe.com/28E14odiR6bReMS6bO97G0m"],["anual",179.1,"https://buy.stripe.com/eVq28s3Ih9o39sy43G97G0v"]]],
+ ["Manutenção Pro",["manutenção pro"],[["mensal",59.9,"https://buy.stripe.com/5kQ3cw7Yx57NbAGgQs97G0s"]]],
+ ["Manutenção Loja Online",["manutenção loja"],[["mensal",69.9,"https://buy.stripe.com/7sY14oa6FdEj8oudEg97G0t"]]],
+ ["Designer Dedicada",["designer dedicada"],[["mensal",150,"https://buy.stripe.com/7sY00kdiRgQv9syeIk97G0u"]]]];
+var LK={total:"Total",sinal:"Sinal 50%",final:"Restante 50%",mensal:"Por mês",anual:"Por ano",unid:"Por unidade"};
+function linksFor(l){var t=(svc(l)+" "+(l.plano||"")+" "+(l.servico||"")+" "+(l.extras||"")).toLowerCase();return LINKS.filter(function(g){return g[1].some(function(k){return t.indexOf(k)>-1;});});}
 function lkBtn(k){return '<button class="lkb" data-a="copy" data-txt="'+esc(k[2])+'" data-tip="Copiar link">'+IC.copy+esc(LK[k[0]])+' · '+eur(k[1])+'</button>';}
 function linksTable(){return '<table class="lkt"><thead><tr><th>Serviço</th><th>Copiar link</th></tr></thead><tbody>'+LINKS.map(function(g){return '<tr><td>'+esc(g[0])+'</td><td><div class="lkx" style="margin:0">'+g[2].map(lkBtn).join("")+'</div></td></tr>';}).join("")+'</tbody></table>';}
 function lps(){return st.data.linkpays||[];}
