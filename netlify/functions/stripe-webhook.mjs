@@ -15,6 +15,28 @@ function verify(raw, header, secret) {
 // Renovações das subscrições (manutenções, Designer Dedicada): cada cobrança mensal/anual entra no painel.
 const eurTxt = (v) => v.toLocaleString("pt-PT", { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 }) + "€";
 const cleanDesc = (d) => String(d || "").replace(/^\d+\s*[×x]\s*/, "").replace(/\s*\((at|a|por)\s[^)]*\)\s*$/i, "").trim();
+async function clientRenewed(s, { to, nome, product, amount, per }) {
+  if (!to) return;
+  const sig = await getSignature(s), first = String(nome || "").trim().split(" ")[0], hi = first ? `Olá ${first},` : "Olá,";
+  const corpo = [`A renovação de ${product} foi feita com sucesso: ${eurTxt(amount)}${per ? " (" + per + ")" : ""}.`, "Não precisas de fazer nada. Obrigada por continuares comigo!"];
+  return sendMail({ to, subject: "Renovação feita com sucesso · " + product, html: mailLayout("Renovação feita", p(hi) + corpo.map((x) => p(x)).join(""), sig), text: `${hi}\n\n${corpo.join("\n\n")}` + signatureText(sig) }).catch((e) => console.error(e));
+}
+
+// Email ao cliente quando um pagamento entra (todos os tipos: sinal, final, total, subscrição, extras).
+async function clientPaid(s, { to, nome, kind, amount, svc, falta, yearly }) {
+  if (!to) return;
+  const sig = await getSignature(s), first = String(nome || "").trim().split(" ")[0], E = eurTxt(amount);
+  let subject = "Pagamento recebido · " + svc, title = "Pagamento recebido", corpo;
+  if (kind === "sinal") {
+    subject = "Pagamento recebido: o teu projeto está reservado"; title = "Projeto reservado";
+    corpo = [`Recebi o teu pagamento de ${E}, o sinal de 50% do teu projeto (${svc}). O teu lugar na minha agenda está reservado.`, "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os detalhes e começarmos."].concat(falta > 0 ? [`Os restantes ${eurTxt(falta)} só são pagos na entrega, quando o projeto estiver pronto.`] : []);
+  } else if (kind === "final") corpo = [`Recebi o pagamento final de ${E} (${svc}). O teu projeto está pago na totalidade.`, "Vou enviar-te todos os ficheiros e acessos ainda hoje ou no próximo dia útil."];
+  else if (kind === "subscricao") corpo = [`Recebi o teu pagamento de ${E} (${svc}).`, `A partir de agora, o pagamento é feito automaticamente ${yearly ? "todos os anos" : "todos os meses"} no mesmo cartão e envio-te um email sempre que for cobrado.`, "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos tudo."];
+  else corpo = [`Recebi o teu pagamento de ${E} (${svc}).`, "Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os próximos passos."];
+  const hi = first ? `Olá ${first},` : "Olá,";
+  return sendMail({ to, subject, html: mailLayout(title, p(hi) + corpo.map((x) => p(x)).join("") + p("Obrigada pela confiança!"), sig), text: `${hi}\n\n${corpo.join("\n\n")}\n\nObrigada pela confiança!` + signatureText(sig) }).catch((e) => console.error(e));
+}
+
 async function renewal(ev, req) {
   const inv = (ev.data && ev.data.object) || {};
   // Só as cobranças seguintes: a 1.ª já chega pelo checkout.session.completed.
@@ -36,6 +58,16 @@ async function renewal(ev, req) {
 
   if (ev.type === "invoice.payment_failed") {
     const amount = Math.round(inv.amount_due || 0) / 100;
+    // O Stripe volta a tentar algumas vezes: só avisamos na 1.ª falha.
+    if ((inv.attempt_count || 1) > 1) return json({ ok: true, retry: inv.attempt_count });
+    if (email) {
+      const sig = await getSignature(s), first = String(name || "").trim().split(" ")[0], hi = first ? `Olá ${first},` : "Olá,";
+      const link = inv.hosted_invoice_url || "";
+      const corpo = [`Não foi possível cobrar a renovação de ${product} (${eurTxt(amount)}${per ? ", " + per : ""}).`, "Normalmente acontece quando o cartão expirou ou não tinha saldo. Para resolver, carrega no botão e paga com um cartão atualizado. Demora menos de um minuto.", "Se precisares de ajuda, responde a este email."];
+      await sendMail({ to: email, subject: "Não foi possível renovar: " + product,
+        html: mailLayout("Renovação por concluir", p(hi) + corpo.map((x) => p(x)).join("") + (link ? button(link, "Atualizar o pagamento") : ""), sig),
+        text: `${hi}\n\n${corpo.join("\n\n")}${link ? "\n\n" + link : ""}` + signatureText(sig) }).catch((e) => console.error(e));
+    }
     await notify(s, { type: "payment", title: "Renovação falhou", sub: `${who} · ${eurTxt(amount)} · ${product}` });
     if (env("NOTIFY_EMAIL")) await sendMail({ to: env("NOTIFY_EMAIL"), replyTo: email || undefined, subject: `Renovação falhou: ${product} · ${who}`,
       html: mailLayout("Renovação falhou", rows([["Cliente", name], ["Email", email], ["Plano", product], ["Valor", eurTxt(amount)], ["Período", per]]) + p("O Stripe vai tentar cobrar outra vez automaticamente. Se continuar a falhar, fala com o cliente para atualizar o cartão.")),
@@ -59,6 +91,7 @@ async function renewal(ev, req) {
     await s.setJSON(key, { id: "rn_" + invId, link: (sub && sub.link) || "", amount, currency: inv.currency || "eur", product: desc, name, email, phone: "", status: "paid", method: "card", renewal: true, sub: subId,
       createdAt: now.toISOString(), updatedAt: now.toISOString(), paidAt: now.toISOString(), paidOn: lisbonDate(now) });
   }
+  await clientRenewed(s, { to: email, nome: lead ? lead.nome : name, product, amount, per });
   await notify(s, { type: "payment", title: "Renovação recebida", sub: `${lead ? lead.nome : who} · ${eurTxt(amount)} · ${product}`, ...(lead ? { leadId: lead.id } : {}) });
   if (env("NOTIFY_EMAIL")) await sendMail({ to: env("NOTIFY_EMAIL"), replyTo: email || undefined, subject: `Renovação recebida: ${eurTxt(amount)} · ${product} · ${lead ? lead.nome : who}`,
     html: mailLayout("Renovação recebida", rows([["Cliente", lead ? lead.nome : name], ["Email", email], ["Plano", product], ["Valor", eurTxt(amount)], ["Período", per]]) + p(lead ? "Já ficou registada no pedido do cliente e nas contas do painel." : "Já conta nas contas do painel. Em Pagamentos podes associá-la ao pedido do cliente.") + button(siteUrl(req) + "/admin/", "Abrir o painel")),
@@ -94,6 +127,7 @@ export default async (req) => {
     const rec = { ...(prev || {}), id: String(ses.id).replace(/[^\w-]/g, ""), link: ses.payment_link, amount: Math.round(ses.amount_total || 0) / 100, currency: ses.currency || "eur", product, name: cd.name || "", email: cd.email || "", phone: cd.phone || "", status: st, method: (ses.payment_method_types || [])[0] || "", createdAt: (prev && prev.createdAt) || now.toISOString(), updatedAt: now.toISOString(), ...(st === "paid" ? { paidAt: now.toISOString(), paidOn: lisbonDate(now) } : {}) };
     await s.setJSON(key, rec);
     if (st === "paid") {
+      await clientPaid(s, { to: rec.email, nome: rec.name, kind: ses.subscription ? "subscricao" : "total", amount: rec.amount, svc: product || "Beatriz Studio", yearly: /anual/i.test(product) });
       const eur = rec.amount.toLocaleString("pt-PT", { minimumFractionDigits: rec.amount % 1 ? 2 : 0 }) + "€";
       const who = rec.name || rec.email || "Cliente";
       await notify(s, { type: "payment", title: "Pagamento recebido por link", sub: `${who} · ${eur}${product ? " · " + product : ""}` });
@@ -136,25 +170,17 @@ export default async (req) => {
           rows([["Cliente", lead.nome], ["Email", lead.email], ["WhatsApp", lead.telefone], ["Marca", lead.marca], ["Serviço", svc], ["Pago agora", eur], ["Falta pagar", falta ? fmt(falta) + " (na entrega)" : ""], ["Mensagem", lead.mensagem]]) +
           p("Próximo passo: abre o pedido no painel e carrega em «Avisar que comecei».") + button(siteUrl(req) + "/admin/", "Abrir o painel")),
         text: `Novo projeto pago: ${svc}\n${lead.nome} (${[lead.email, lead.telefone].filter(Boolean).join(", ")})\nPago agora: ${eur}${falta ? "\nFalta pagar: " + fmt(falta) : ""}\n\n${lead.mensagem || ""}` }));
-      if (lead.email) {
-        const sig = await getSignature(s);
-        const first = String(lead.nome || "").split(" ")[0];
-        const corpo = pay.kind === "sinal"
-          ? [`Recebi o teu pagamento de ${eur}, o sinal de 50% do teu projeto (${svc}). O teu lugar na minha agenda está reservado.`,
-             `Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os detalhes e começarmos.`,
-             `Os restantes ${fmt(falta)} só são pagos na entrega, quando o projeto estiver pronto.`]
-          : pay.kind === "mensal"
-          ? [`Recebi o teu pagamento de ${eur}, referente ao 1.º mês de ${svc}.`, `Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos tudo e começarmos.`, `Nos meses seguintes envio-te o link de pagamento no início de cada mês.`]
-          : [`Recebi o teu pagamento de ${eur} (${svc}).`, `Nas próximas 24 a 48 horas entro em contacto contigo para combinarmos os próximos passos.`];
-        tasks.push(sendMail({ to: lead.email, subject: "Pagamento recebido: o teu projeto está reservado",
-          html: mailLayout("Projeto reservado", p(`Olá ${first},`) + corpo.map((x) => p(x)).join("") + p("Obrigada pela confiança!"), sig),
-          text: `Olá ${first},\n\n${corpo.join("\n\n")}\n\nObrigada pela confiança!` + signatureText(sig) }));
-      }
       await Promise.allSettled(tasks);
     } else if (env("NOTIFY_EMAIL")) {
       await sendMail({ to: env("NOTIFY_EMAIL"), subject: `${pay.kind === "sinal" ? "Sinal recebido" : pay.kind === "final" ? "Pagamento final recebido" : "Pagamento recebido"}: ${eur} · ${lead.nome}`,
         html: mailLayout("Pagamento recebido", rows([["Cliente", lead.nome], ["Valor", eur], ["Descrição", pay.desc], ["Email", lead.email]]) + button(siteUrl(req) + "/admin/", "Abrir o painel")),
         text: `Pagamento recebido: ${eur}\n${lead.nome}\n${pay.desc}` });
+    }
+    // Confirmação ao cliente, para qualquer pagamento de um pedido (site, orçamento automático ou link do painel).
+    if (lead.email) {
+      const total = lead.quote ? lead.quote.total : +lead.valor || pay.amount;
+      const svc2 = lead.subcategoria ? lead.categoria + " — " + lead.subcategoria : lead.plano || lead.servico || pay.desc || "o teu projeto";
+      await clientPaid(s, { to: lead.email, nome: lead.nome, kind: pay.kind, amount: pay.amount, svc: svc2, falta: pay.kind === "sinal" ? Math.round((total - pay.amount) * 100) / 100 : 0 });
     }
   }
   return json({ ok: true, status });
