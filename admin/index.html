@@ -354,20 +354,20 @@ details.more summary{font:500 17px var(--serif);color:var(--ink)}
 .lkb svg{width:14px;height:14px}
 .lkx{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 @media (max-width:1180px){.dash,.dash3{grid-template-columns:minmax(0,1fr)}}
-.chart .ab.meta{fill:var(--dark)}.chart .ab.google{fill:#C9838E}
+.chart .bk.meta{fill:var(--dark)}.chart .bk.google{fill:#C9838E}
 .card h2 .lg{display:inline-flex;gap:14px;align-items:center;font:600 12.5px var(--sans);color:var(--mut)}
 .card h2 .lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}.lg i.meta{background:var(--dark)}.lg i.google{background:#C9838E}
 .tw{overflow-x:auto;margin:0 -4px}
-.adt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px;font-variant-numeric:tabular-nums}
-.adt th{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:right;padding:0 10px 10px;white-space:nowrap}
-.adt td{padding:12px 10px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
-.adt th:first-child,.adt td:first-child{text-align:left;white-space:normal}
-.adt td:first-child{font-weight:600}
+.cmptbl{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px;font-variant-numeric:tabular-nums}
+.cmptbl th{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:right;padding:0 10px 10px;white-space:nowrap}
+.cmptbl td{padding:12px 10px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+.cmptbl th:first-child,.cmptbl td:first-child{text-align:left;white-space:normal}
+.cmptbl td:first-child{font-weight:600}
 .pl{display:inline-block;margin-right:8px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.04em;vertical-align:1px}
 .pl.meta{background:var(--dark);color:#fff}.pl.google{background:#F3DADD;color:var(--tink)}
-.adset summary{cursor:pointer;list-style:none;font-size:15px}.adset summary::-webkit-details-marker{display:none}
-.adset ol{margin:12px 0 0;padding-left:20px;font-size:14px;color:var(--mut);display:flex;flex-direction:column;gap:8px}.adset ol b{color:var(--ink)}
-.adset{margin-bottom:14px}
+.tpsetup summary{cursor:pointer;list-style:none;font-size:15px}.tpsetup summary::-webkit-details-marker{display:none}
+.tpsetup ol{margin:12px 0 0;padding-left:20px;font-size:14px;color:var(--mut);display:flex;flex-direction:column;gap:8px}.tpsetup ol b{color:var(--ink)}
+.tpsetup{margin-bottom:14px}
 @media (max-width:700px){.lkt thead{display:none}.lkt tr{display:grid;grid-template-columns:1fr;padding:10px 0;border-top:1px solid var(--line)}.lkt td{border:0;padding:4px 0}}
 </style></head><body><div id="app"></div><script>(function(){
 "use strict";
@@ -604,23 +604,23 @@ function adsChart(R,P,W){W=Math.max(Math.round(W||760),260);var days=[],d=R[0];w
   var v=days.map(function(x){return P.map(function(p){return by[p[0]+x]||0;});}),tot=v.map(function(a){return a.reduce(function(s,y){return s+y;},0);});
   var max=Math.max.apply(null,tot.concat([0])),H=W<500?170:200,pl=50,pb=26,pt=10,cw=(W-pl)/days.length,bw=Math.max(Math.min(cw-3,26),2);
   var nice=max<=0?10:Math.pow(10,Math.floor(Math.log10(max)));var top=Math.ceil(max/nice)*nice;if(top/nice<=2)top=Math.ceil(max/(nice/2))*(nice/2);if(!top)top=10;
-  var s='<div class="chart cads"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Investimento por dia">';
+  var s='<div class="chart cinvest"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Investimento por dia">';
   [0,.5,1].forEach(function(f){var y=pt+(H-pb-pt)*(1-f);s+='<line class="gl" x1="'+pl+'" x2="'+W+'" y1="'+y+'" y2="'+y+'"/><text class="ax" x="'+(pl-8)+'" y="'+(y+4)+'" text-anchor="end">'+esc(eur(top*f))+'</text>';});
   var step=Math.ceil(days.length/8);
   days.forEach(function(day,i){var x=pl+i*cw+(cw-bw)/2,base=H-pb,tip=dShort(day)+": "+P.map(function(p,j){return p[1]+" "+eur2(v[i][j]);}).join(" · ");
     s+='<g data-tip="'+esc(tip)+'"><rect class="hit" x="'+(pl+i*cw)+'" y="'+pt+'" width="'+cw+'" height="'+(H-pb-pt)+'"/>';
     if(!tot[i])s+='<path class="bar z" d="'+barPath(x,base-2,bw,2,1)+'"/>';
-    P.forEach(function(p,j){var h=v[i][j]>0?Math.max((H-pb-pt)*v[i][j]/top,2):0;if(!h)return;base-=h;s+='<rect class="ab '+p[0]+'" x="'+x+'" y="'+base+'" width="'+bw+'" height="'+h+'" rx="'+Math.min(3,bw/2)+'"/>';});
+    P.forEach(function(p,j){var h=v[i][j]>0?Math.max((H-pb-pt)*v[i][j]/top,2):0;if(!h)return;base-=h;s+='<rect class="bk '+p[0]+'" x="'+x+'" y="'+base+'" width="'+bw+'" height="'+h+'" rx="'+Math.min(3,bw/2)+'"/>';});
     s+='</g>';if(i%step===0)s+='<text class="ax" x="'+(x+bw/2)+'" y="'+(H-8)+'" text-anchor="middle">'+esc(dShort(day))+'</text>';});
   return s+'</svg></div>';}
 function adsSetup(k){var meta=k==="meta";
-  return '<details class="card setupc adset"><summary><b>'+(meta?"Ligar a Meta Ads (Facebook e Instagram)":"Ligar o Google Ads")+'</b><span class="muted"> · como fazer</span></summary>'+(meta?
+  return '<details class="card setupc tpsetup"><summary><b>'+(meta?"Ligar a Meta Ads (Facebook e Instagram)":"Ligar o Google Ads")+'</b><span class="muted"> · como fazer</span></summary>'+(meta?
     '<ol><li>Em <b>business.facebook.com</b> → Definições da empresa → <b>Utilizadores do sistema</b>, cria um utilizador (função Administrador) e atribui-lhe a tua <b>conta de anúncios</b> com a permissão «Ver desempenho».</li><li>Em <b>developers.facebook.com</b>, cria uma app do tipo «Empresa» ligada ao teu Business. Volta ao utilizador do sistema e carrega em <b>Gerar token</b>, escolhe essa app e marca a permissão <b>ads_read</b>.</li><li>No Netlify → Project configuration → <b>Environment variables</b>, cria <b>META_ACCESS_TOKEN</b> (o token) e <b>META_AD_ACCOUNT_ID</b> (o número da conta de anúncios, aparece no Gestor de Anúncios como act_…).</li><li>Volta aqui e carrega em Atualizar. Não é preciso carregar nada no GitHub.</li></ol>'
    :'<ol><li>O Google só dá acesso à API a contas com um <b>developer token</b>: no Google Ads, com uma conta de gestor (MCC), vai a Ferramentas → <b>Centro de API</b> e pede o acesso (a aprovação pode demorar alguns dias).</li><li>Em <b>console.cloud.google.com</b>, ativa a «Google Ads API» e cria um <b>cliente OAuth</b> (aplicação web). Guarda o Client ID e o Client secret.</li><li>Gera um <b>refresh token</b> para a tua conta Google com o âmbito https://www.googleapis.com/auth/adwords (por exemplo, no OAuth Playground com o teu cliente OAuth).</li><li>No Netlify, cria <b>GOOGLE_ADS_DEVELOPER_TOKEN</b>, <b>GOOGLE_ADS_CLIENT_ID</b>, <b>GOOGLE_ADS_CLIENT_SECRET</b>, <b>GOOGLE_ADS_REFRESH_TOKEN</b> e <b>GOOGLE_ADS_CUSTOMER_ID</b> (o número da conta, ex.: 123-456-7890). Se usares conta de gestor, junta <b>GOOGLE_ADS_LOGIN_CUSTOMER_ID</b>.</li></ol>')+'</details>';}
 function viewAnuncios(){var R=adsRange(),D=ADS.data,k=R.join("|");if(!ADS.loading&&(ADS.key!==k||!D)&&!ADS.err)setTimeout(function(){loadAds();},0);
   var RG=[["7","7 dias"],["30","30 dias"],["90","90 dias"],["mes","Este mês"],["mespassado","Mês passado"]],PL=[["all","Todas"],["meta","Meta"],["google","Google"]];
-  var o='<div class="head"><div><span class="eb">Meta Ads · Google Ads</span><h1>Tráfego pago</h1></div><div class="tools"><button class="btn btn-s btn-sm" data-a="ads-refresh"'+(ADS.loading?" disabled":"")+'>'+(ADS.loading?"A atualizar…":"Atualizar")+'</button></div></div>';
-  o+='<div class="filters" role="group" aria-label="Período">'+RG.map(function(r){return '<button class="fb'+(ADS.range===r[0]?" on":"")+'" data-a="ads-range" data-r="'+r[0]+'" aria-pressed="'+(ADS.range===r[0])+'">'+r[1]+'</button>';}).join("")+'<span style="width:12px"></span>'+PL.map(function(r){return '<button class="fb'+(ADS.plat===r[0]?" on":"")+'" data-a="ads-plat" data-r="'+r[0]+'" aria-pressed="'+(ADS.plat===r[0])+'">'+r[1]+'</button>';}).join("")+'</div>';
+  var o='<div class="head"><div><span class="eb">Meta Ads · Google Ads</span><h1>Tráfego pago</h1></div><div class="tools"><button class="btn btn-s btn-sm" data-a="tp-refresh"'+(ADS.loading?" disabled":"")+'>'+(ADS.loading?"A atualizar…":"Atualizar")+'</button></div></div>';
+  o+='<div class="filters" role="group" aria-label="Período">'+RG.map(function(r){return '<button class="fb'+(ADS.range===r[0]?" on":"")+'" data-a="tp-range" data-r="'+r[0]+'" aria-pressed="'+(ADS.range===r[0])+'">'+r[1]+'</button>';}).join("")+'<span style="width:12px"></span>'+PL.map(function(r){return '<button class="fb'+(ADS.plat===r[0]?" on":"")+'" data-a="tp-plat" data-r="'+r[0]+'" aria-pressed="'+(ADS.plat===r[0])+'">'+r[1]+'</button>';}).join("")+'</div>';
   o+='<p class="muted" style="margin:-8px 0 20px;font-size:13.5px">'+esc(dShort(R[0]))+' a '+esc(dShort(R[1]))+'</p>';
   if(ADS.err)return o+'<div class="card setupc"><h2>Não foi possível carregar</h2><p>'+esc(ADS.err)+'</p></div>';
   if(!D)return o+'<p class="muted">A carregar os números…</p>';
@@ -640,7 +640,7 @@ function viewAnuncios(){var R=adsRange(),D=ADS.data,k=R.join("|");if(!ADS.loadin
       '<div class="kpi"><small>Retorno (ROAS)</small><b>'+(T.spend?(FT/T.spend).toLocaleString("pt-PT",{maximumFractionDigits:1})+"×":"—")+'</b><span>Faturado ÷ investido</span></div></div>';
     o+='<div class="card" style="margin-bottom:22px"><h2>Investimento por dia <span class="lg">'+P.map(function(p){return '<i class="'+p[0]+'"></i>'+p[1];}).join("")+'</span></h2>'+adsChart(R,P)+'</div>';
     C.sort(function(a,b){return b.spend-a.spend;});
-    o+='<div class="card"><h2>Campanhas <span class="muted" style="font:600 13px var(--sans)">'+C.length+'</span></h2>'+(C.length?'<div class="tw"><table class="adt"><thead><tr><th>Campanha</th><th>Investido</th><th>Impressões</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>Resultados</th><th>Custo/result.</th></tr></thead><tbody>'+
+    o+='<div class="card"><h2>Campanhas <span class="muted" style="font:600 13px var(--sans)">'+C.length+'</span></h2>'+(C.length?'<div class="tw"><table class="cmptbl"><thead><tr><th>Campanha</th><th>Investido</th><th>Impressões</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>Resultados</th><th>Custo/result.</th></tr></thead><tbody>'+
       C.map(function(c){var r=c.leads+c.conversations;return '<tr><td><span class="pl '+c.plat+'">'+esc(c.platN)+'</span>'+esc(c.name)+'</td><td>'+eur2(c.spend)+'</td><td>'+n0(c.impressions)+'</td><td>'+n0(c.clicks)+'</td><td>'+pct(c.impressions?c.clicks*100/c.impressions:0)+'</td><td>'+(c.clicks?eur2(c.spend/c.clicks):"—")+'</td><td>'+(r?n0(r):"—")+'</td><td>'+(r?eur2(c.spend/r):"—")+'</td></tr>';}).join("")+'</tbody></table></div>':'<div class="empty">Sem campanhas com impressões neste período.</div>')+
       '<p class="muted" style="margin:12px 0 0;font-size:12.5px">Resultados: na Meta, leads e conversas iniciadas; no Google, conversões. Os pedidos no site incluem todas as origens, não só os anúncios.</p></div>';
   } else if((D.meta&&D.meta.configured)||(D.google&&D.google.configured))o+='<div class="empty">Sem dados para mostrar com este filtro.</div>';
@@ -1032,7 +1032,7 @@ var scrollMemo=0;
 function render(){var root=document.getElementById("app"),dr=document.querySelector(".dr"),ds=dr?dr.scrollTop:0;scrollMemo=window.scrollY;
   root.innerHTML=(st.key&&st.me)||st.demo?viewApp():(st.key&&st.loading?'<div class="login"><p class="muted">A entrar…</p></div>':viewLogin());
   var nd=document.querySelector(".dr");if(nd&&ds)nd.scrollTop=ds;
-  var ch=document.querySelector(".chart[data-m]");if(ch&&ch.clientWidth)ch.outerHTML=chart(ch.dataset.m,ch.clientWidth);var c12=document.querySelector(".c12");if(c12&&c12.clientWidth)c12.outerHTML=chart12(st.month,c12.clientWidth);var ca=document.querySelector(".cads");if(ca&&ca.clientWidth&&ADS.data)ca.outerHTML=adsChart(adsRange(),adsPlats(),ca.clientWidth);
+  var ch=document.querySelector(".chart[data-m]");if(ch&&ch.clientWidth)ch.outerHTML=chart(ch.dataset.m,ch.clientWidth);var c12=document.querySelector(".c12");if(c12&&c12.clientWidth)c12.outerHTML=chart12(st.month,c12.clientWidth);var ca=document.querySelector(".cinvest");if(ca&&ca.clientWidth&&ADS.data)ca.outerHTML=adsChart(adsRange(),adsPlats(),ca.clientWidth);
   document.body.style.overflow=st.drawer?"hidden":"";setTitle();}
 function go(v){st.view=v;st.menu=false;st.drawer=null;render();window.scrollTo(0,0);var m=document.querySelector(".view h1");if(m){m.setAttribute("tabindex","-1");m.focus({preventScroll:true});}}
 function openDrawer(type,id,extra){st.drawer=Object.assign({type:type,id:id},extra||{});st.tpl=null;st.msg=null;st.subj=null;resetFn();
@@ -1076,9 +1076,9 @@ document.addEventListener("click",function(ev){
   if(act==="m-prev"){st.month=prevMonth(st.month);render();return;}
   if(act==="m-set"){st.month=a.dataset.m;render();var dc=document.querySelector(".chart[data-m]");if(dc)dc.scrollIntoView({block:"center",behavior:"smooth"});return;}
   if(act==="lp-open"){openDrawer("lp",id);return;}
-  if(act==="ads-range"){ADS.range=a.dataset.r;ADS.data=null;ADS.err="";render();loadAds(true);return;}
-  if(act==="ads-plat"){ADS.plat=a.dataset.r;render();return;}
-  if(act==="ads-refresh"){ADS.data=null;ADS.err="";render();loadAds(true);return;}
+  if(act==="tp-range"){ADS.range=a.dataset.r;ADS.data=null;ADS.err="";render();loadAds(true);return;}
+  if(act==="tp-plat"){ADS.plat=a.dataset.r;render();return;}
+  if(act==="tp-refresh"){ADS.data=null;ADS.err="";render();loadAds(true);return;}
   if(act==="m-next"){if(st.month<today().slice(0,7)){st.month=nextMonth(st.month);render();}return;}
   /* pedidos */
   if(act==="open-lead"){openDrawer("lead",id);return;}
