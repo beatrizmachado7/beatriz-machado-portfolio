@@ -3,6 +3,7 @@
 // Pessoas da equipa entram com email + palavra-passe própria, criada por um link de convite.
 // A equipa não vê faturação (valores e pagamentos) e cada pessoa tem a sua própria agenda.
 import { createHash, timingSafeEqual } from "node:crypto";
+import { sendTestEmails } from "../lib/test-emails.mjs";
 import { json, env, sha, ip, limited, hashPw, checkPw, newToken, newCode, codeBox, store as getCrm, publicUser, sendMail, mailLayout, mailText, mailReady, p, button, siteUrl, emailOk, stripe, stripeReady, getSignature, signatureText } from "../lib/common.mjs";
 
 const OWNER_COLS = new Set(["leads", "clients", "projects", "boards", "agenda", "templates"]);
@@ -249,6 +250,14 @@ export default async (req) => {
 
     if (a) {
       if (!owner) return json({ error: "Sem permissão." }, 403);
+      if (a === "test-emails") {
+        const to = String(body.to || "").toLowerCase().trim();
+        if (!emailOk(to) || !(ownerEmails().includes(to) || to === String(env("NOTIFY_EMAIL") || "").toLowerCase())) return json({ error: "Os emails de teste só podem ir para o teu email." }, 400);
+        if (!mailReady()) return json({ error: "O envio de emails não está configurado." }, 400);
+        if (await limited(store, "testmail", 5, 36e5)) return json({ error: "Já enviaste vários testes. Tenta daqui a uma hora." }, 429);
+        const r = await sendTestEmails(to, siteUrl(req), Array.isArray(body.templates) ? body.templates : []);
+        return json({ ok: r.ok, fail: r.fail, total: r.total });
+      }
       /* pagamentos (Stripe) */
       const loadLead = async () => { const id = String(body.id || "").replace(/[^\w-]/g, ""); return { id, lead: await store.get("leads/" + id, { type: "json" }) }; };
       const createPay = async (lead, cents, desc, kind, redirect) => {
