@@ -3,6 +3,7 @@
 // Pessoas da equipa entram com email + palavra-passe própria, criada por um link de convite.
 // A equipa não vê faturação (valores e pagamentos) e cada pessoa tem a sua própria agenda.
 import { createHash, timingSafeEqual } from "node:crypto";
+import { DIAG_STATES, manualStatusError, isApproved, canSend, logState, normalizeReport, reportHash, diagPdf } from "../lib/diagnostico.mjs";
 import { json, env, sha, ip, limited, hashPw, checkPw, newToken, newCode, codeBox, store as getCrm, publicUser, sendMail, mailLayout, mailText, mailReady, p, button, siteUrl, emailOk, stripe, stripeReady, getSignature, signatureText } from "../lib/common.mjs";
 
 const OWNER_COLS = new Set(["leads", "clients", "projects", "boards", "agenda", "templates"]);
@@ -341,6 +342,49 @@ export default async (req) => {
         await store.setJSON("leads/" + id, upd);
         return json({ ok: true, item: upd });
       }
+      /* diagnóstico digital: estados, rascunho, aprovação (obrigatória), PDF e envio ao cliente */
+      if (a === "diag-status" || a === "diag-draft" || a === "diag-approve" || a === "diag-pdf" || a === "diag-send") {
+        const { id, lead } = await loadLead();
+        if (!lead || lead.type !== "diagnostico") return json({ error: "Pedido de diagnóstico não encontrado" }, 404);
+        const diag = lead.diag || { status: "new", log: [] };
+        const now = new Date().toISOString();
+        const put = async (upd) => { const item = { ...lead, ...upd, visto: true, updatedAt: now }; await store.setJSON("leads/" + id, item); return item; };
+        if (a === "diag-status") {
+          const to = String(body.status || "");
+          const err = manualStatusError(diag, to);
+          if (err) return json({ error: err }, 400);
+          if (to === diag.status) return json({ ok: true, item: lead });
+          return json({ ok: true, item: await put({ diag: logState(diag, to, me.name, to === "delivered" ? { via: "manual" } : null) }) });
+        }
+        if (a === "diag-draft") {
+          let raw = body.report;
+          if (typeof raw === "string") { try { raw = JSON.parse(raw); } catch { return json({ error: "O rascunho não é um JSON válido. Copia o bloco inteiro, de { até }." }, 400); } }
+          const { report, errors } = normalizeReport(raw);
+          if (errors.length) return json({ error: errors.join(" "), errors }, 400);
+          // um rascunho novo ou alterado anula qualquer aprovação anterior
+          const next = logState({ ...diag, report, reportHash: reportHash(report), reportAt: now, approved: null }, "draft_ready", me.name);
+          return json({ ok: true, item: await put({ diag: next }) });
+        }
+        if (!diag.report) return json({ error: "Ainda não há rascunho guardado para este diagnóstico." }, 400);
+        if (a === "diag-approve") {
+          if (body.confirm !== true) return json({ error: "Confirma que leste e reviste o diagnóstico antes de o aprovar." }, 400);
+          const next = logState({ ...diag, approved: { at: now, by: me.name, hash: diag.reportHash } }, "approved", me.name);
+          return json({ ok: true, item: await put({ diag: next }) });
+        }
+        const sig = await getSignature(store);
+        const pdfOf = async () => Buffer.from(await diagPdf(lead, diag.report, { date: (diag.approved && diag.approved.at) || now, draft: !isApproved(diag), sig, site: siteUrl(req) })).toString("base64");
+        const filename = "Diagnostico-Digital-" + String(lead.marca || lead.nome || "cliente").normalize("NFD").replace(/[^\w ]/g, "").trim().replace(/\s+/g, "-").slice(0, 50) + ".pdf";
+        if (a === "diag-pdf") return json({ ok: true, pdf: await pdfOf(), filename, draft: !isApproved(diag) });
+        // envio: só com a versão aprovada pela Beatriz; nunca um rascunho por rever
+        if (!canSend(diag)) return json({ error: "Este diagnóstico ainda não foi aprovado. Lê o rascunho e aprova-o antes de enviar." }, 409);
+        if (!lead.email) return json({ error: "Este pedido não tem email." }, 400);
+        if (!mailReady()) return json({ error: "O envio de emails não está configurado no Netlify (RESEND_API_KEY e MAIL_FROM)." }, 500);
+        const em = diag.report.email;
+        const r = await sendMail({ to: lead.email, subject: em.assunto, html: mailLayout(em.assunto, mailText(em.texto), sig), text: em.texto + signatureText(sig), attachments: [{ filename, content: await pdfOf() }] });
+        if (!r.ok) return json({ error: "O serviço de email recusou o envio. O diagnóstico continua por entregar; tenta novamente daqui a pouco." }, 502);
+        const next = logState({ ...diag, deliveredAt: now }, "delivered", me.name, { via: "email" });
+        return json({ ok: true, item: await put({ diag: next, history: [...(lead.history || []), { at: now, via: "email", by: me.name, subject: em.assunto, text: em.texto + "\n\n[Anexo: " + filename + "]" }] }) });
+      }
       /* tráfego pago */
       if (a === "ads") {
         const d = (x) => (/^\d{4}-\d{2}-\d{2}$/.test(String(x || "")) ? String(x) : null);
@@ -443,6 +487,8 @@ export default async (req) => {
       return json({ ok: true, item: stripMoney(upd) });
     }
     const saved = { ...item, id, createdAt: item.createdAt || now, updatedAt: now };
+    // o estado e o relatório do diagnóstico só mudam pelas ações diag-* (para a aprovação não poder ser contornada)
+    if (col === "leads" && prev && prev.type === "diagnostico") { saved.type = "diagnostico"; saved.diag = prev.diag; }
     await store.setJSON(col + "/" + id, saved);
     return json({ ok: true, item: saved });
   }

@@ -51,3 +51,22 @@ Sem `RESEND_API_KEY`/`MAIL_FROM`, o site continua a funcionar: as contas ficam a
 
 ## Email de contacto
 O site mostra beatrizmachadostudio@gmail.com. Os emails automáticos saem de ola@beatrizstudio.pt (domínio verificado no Resend) e as respostas dos clientes vão para beatrizmachadostudio@gmail.com.
+
+## Diagnóstico Digital Gratuito
+- `diagnostico-digital/index.html` — a landing page (beatrizstudio.pt/diagnostico-digital/). Usa `assets/site.css` + `assets/diagnostico.css` e `assets/diagnostico.js` (não carrega `site.js`).
+- `netlify/functions/diagnostico.mjs` — recebe o pedido (`/api/diagnostico`), valida no servidor, guarda-o junto dos outros pedidos com o estado «Novo», cria a notificação no painel e envia os emails (confirmação ao cliente + aviso para `NOTIFY_EMAIL`).
+- `netlify/lib/diagnostico.mjs` — estados, validação, formato do rascunho e o PDF do relatório.
+- `netlify/functions/admin.mjs` — ações `diag-status`, `diag-draft`, `diag-approve`, `diag-pdf` e `diag-send` (só a dona).
+- `docs/diagnostico-digital.md` — o fluxo de trabalho com a Claude e o formato do rascunho.
+
+Como funciona:
+1. O formulário só mostra «Pedido recebido!» depois de o servidor confirmar que o pedido ficou guardado.
+2. Anti-spam: campo armadilha, tempo mínimo, máx. 5 pedidos por hora por dispositivo e 4 por dia por email.
+3. Sem duplicados: o mesmo email + o mesmo website/Instagram não criam um segundo pedido enquanto o primeiro estiver aberto.
+4. No painel (Pedidos → «Diagnósticos»): colar o rascunho, ver o PDF, aprovar e enviar. Sem aprovação, o envio é recusado pelo servidor.
+5. Se o Resend der erro, o pedido fica guardado na mesma, o painel assinala que a confirmação não foi enviada e nada é marcado como enviado.
+6. Os dados servem apenas para o diagnóstico: ninguém é inscrito em listas de marketing.
+
+Não precisa de variáveis novas: usa `RESEND_API_KEY`, `MAIL_FROM`, `NOTIFY_EMAIL`, `REPLY_TO`, `SITE_URL` e `ADMIN_PASSWORD`.
+
+Eventos (enviados só se o Google Analytics já estiver carregado na página): `diagnostico_cta_click`, `diagnostico_form_start`, `diagnostico_form_erro`, `diagnostico_faq`, `generate_lead` (com `lead_type: diagnostico_digital`).
