@@ -63,7 +63,7 @@ Como funciona:
 1. O formulário só mostra «Pedido recebido!» depois de o servidor confirmar que o pedido ficou guardado.
 2. Anti-spam: campo armadilha, tempo mínimo, máx. 5 pedidos por hora por dispositivo e 4 por dia por email.
 3. Sem duplicados: o mesmo email + o mesmo website/Instagram não criam um segundo pedido enquanto o primeiro estiver aberto.
-4. No painel (Pedidos → «Diagnósticos»): colar o rascunho, ver o PDF, aprovar e enviar. Sem aprovação, o envio é recusado pelo servidor.
+4. No painel (separador «Diagnósticos»): colar o rascunho, ver o PDF, aprovar e enviar. Sem aprovação, o envio é recusado pelo servidor.
 5. Se o Resend der erro, o pedido fica guardado na mesma, o painel assinala que a confirmação não foi enviada e nada é marcado como enviado.
 6. Os dados servem apenas para o diagnóstico: ninguém é inscrito em listas de marketing.
 
