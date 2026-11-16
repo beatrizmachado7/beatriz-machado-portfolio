@@ -12,6 +12,60 @@ function verify(raw, header, secret) {
   return sigs.some((s) => { const b = Buffer.from(s); return b.length === exp.length && timingSafeEqual(b, exp); });
 }
 
+// Renovações das subscrições (manutenções, Designer Dedicada): cada cobrança mensal/anual entra no painel.
+const eurTxt = (v) => v.toLocaleString("pt-PT", { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 }) + "€";
+const cleanDesc = (d) => String(d || "").replace(/^\d+\s*[×x]\s*/, "").replace(/\s*\((at|a|por)\s[^)]*\)\s*$/i, "").trim();
+async function renewal(ev, req) {
+  const inv = (ev.data && ev.data.object) || {};
+  // Só as cobranças seguintes: a 1.ª já chega pelo checkout.session.completed.
+  if (inv.billing_reason !== "subscription_cycle") return json({ ok: true, ignored: inv.billing_reason || "invoice" });
+  const subId = String(inv.subscription || (inv.parent && inv.parent.subscription_details && inv.parent.subscription_details.subscription) || "").replace(/[^\w-]/g, "");
+  if (!subId || !inv.id) return json({ ok: true, noSub: true });
+  const s = getCrm(), invId = String(inv.id).replace(/[^\w-]/g, ""), now = new Date();
+  let sub = await s.get("subs/" + subId, { type: "json" });
+  if (!sub) {
+    try { const l = await stripe("checkout/sessions?limit=1&subscription=" + encodeURIComponent(subId), {}, "GET"); const cs = (l.data || [])[0]; if (cs) sub = { session: cs.id, link: cs.payment_link || "" }; } catch (e) { console.error("renewal lookup", e); }
+    if (sub) await s.setJSON("subs/" + subId, sub);
+  }
+  const orig = sub && sub.session ? await s.get("linkpays/" + String(sub.session).replace(/[^\w-]/g, ""), { type: "json" }) : null;
+  const lines = (inv.lines && inv.lines.data) || [];
+  const product = (orig && orig.product) || cleanDesc(lines.map((x) => x.description).filter(Boolean)[0]) || "Subscrição";
+  const per = lines[0] && lines[0].period && lines[0].period.start ? new Date(lines[0].period.start * 1000).toLocaleDateString("pt-PT", { month: "long", year: "numeric", timeZone: "Europe/Lisbon" }) : "";
+  const name = inv.customer_name || (orig && orig.name) || "", email = inv.customer_email || (orig && orig.email) || "";
+  const who = name || email || "Cliente";
+
+  if (ev.type === "invoice.payment_failed") {
+    const amount = Math.round(inv.amount_due || 0) / 100;
+    await notify(s, { type: "payment", title: "Renovação falhou", sub: `${who} · ${eurTxt(amount)} · ${product}` });
+    if (env("NOTIFY_EMAIL")) await sendMail({ to: env("NOTIFY_EMAIL"), replyTo: email || undefined, subject: `Renovação falhou: ${product} · ${who}`,
+      html: mailLayout("Renovação falhou", rows([["Cliente", name], ["Email", email], ["Plano", product], ["Valor", eurTxt(amount)], ["Período", per]]) + p("O Stripe vai tentar cobrar outra vez automaticamente. Se continuar a falhar, fala com o cliente para atualizar o cartão.")),
+      text: `Renovação falhou: ${product}\n${who}${email ? " (" + email + ")" : ""}\n${eurTxt(amount)}` }).catch((e) => console.error(e));
+    return json({ ok: true, failed: true });
+  }
+
+  const amount = Math.round(inv.amount_paid || 0) / 100;
+  if (!(amount > 0)) return json({ ok: true, zero: true });
+  const desc = product + " · renovação" + (per ? " (" + per + ")" : "");
+  const leadId = orig && orig.leadId;
+  const lead = leadId ? await s.get("leads/" + leadId, { type: "json" }) : null;
+  if (lead) {
+    const pid = "rn" + invId.slice(-14);
+    if ((lead.payments || []).some((x) => x.id === pid)) return json({ ok: true });
+    const pay = { id: pid, kind: "renovacao", amount, desc, status: "paid", src: "renovacao", sub: subId, invoice: invId, url: "", createdAt: now.toISOString(), paidAt: now.toISOString(), paidOn: lisbonDate(now), method: "card" };
+    await s.setJSON("leads/" + lead.id, { ...lead, payments: [...(lead.payments || []), pay], updatedAt: now.toISOString() });
+  } else {
+    const key = "linkpays/rn_" + invId;
+    if (await s.get(key, { type: "json" })) return json({ ok: true });
+    await s.setJSON(key, { id: "rn_" + invId, link: (sub && sub.link) || "", amount, currency: inv.currency || "eur", product: desc, name, email, phone: "", status: "paid", method: "card", renewal: true, sub: subId,
+      createdAt: now.toISOString(), updatedAt: now.toISOString(), paidAt: now.toISOString(), paidOn: lisbonDate(now) });
+  }
+  await notify(s, { type: "payment", title: "Renovação recebida", sub: `${lead ? lead.nome : who} · ${eurTxt(amount)} · ${product}`, ...(lead ? { leadId: lead.id } : {}) });
+  if (env("NOTIFY_EMAIL")) await sendMail({ to: env("NOTIFY_EMAIL"), replyTo: email || undefined, subject: `Renovação recebida: ${eurTxt(amount)} · ${product} · ${lead ? lead.nome : who}`,
+    html: mailLayout("Renovação recebida", rows([["Cliente", lead ? lead.nome : name], ["Email", email], ["Plano", product], ["Valor", eurTxt(amount)], ["Período", per]]) + p(lead ? "Já ficou registada no pedido do cliente e nas contas do painel." : "Já conta nas contas do painel. Em Pagamentos podes associá-la ao pedido do cliente.") + button(siteUrl(req) + "/admin/", "Abrir o painel")),
+    text: `Renovação recebida: ${eurTxt(amount)}\n${product}\n${lead ? lead.nome : who}` }).catch((e) => console.error(e));
+  return json({ ok: true, renewal: true });
+}
+
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Método não permitido" }, 405);
   const secret = env("STRIPE_WEBHOOK_SECRET");
@@ -19,6 +73,7 @@ export default async (req) => {
   const raw = await req.text();
   if (!verify(raw, req.headers.get("stripe-signature"), secret)) return json({ error: "Assinatura inválida" }, 400);
   let ev; try { ev = JSON.parse(raw); } catch { return json({ error: "JSON inválido" }, 400); }
+  if (ev.type === "invoice.paid" || ev.type === "invoice.payment_failed") return renewal(ev, req);
   const types = ["checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed"];
   if (!types.includes(ev.type)) return json({ ok: true, ignored: ev.type });
   const ses = ev.data && ev.data.object || {};
@@ -29,6 +84,7 @@ export default async (req) => {
     // Pagamento feito por um dos links fixos (ex.: «Landing Page · Sinal 50%»): guarda-o para a Beatriz o associar a um pedido no painel.
     if (!ses.payment_link || !ses.id) return json({ ok: true, unknown: true });
     const key = "linkpays/" + String(ses.id).replace(/[^\w-]/g, "");
+    if (ses.subscription) await s.setJSON("subs/" + String(ses.subscription).replace(/[^\w-]/g, ""), { session: ses.id, link: ses.payment_link });
     const prev = await s.get(key, { type: "json" });
     if (prev && prev.status === "paid") return json({ ok: true });
     const st = ev.type === "checkout.session.async_payment_failed" ? "failed" : (ses.payment_status === "paid" || ev.type === "checkout.session.async_payment_succeeded") ? "paid" : "waiting";
