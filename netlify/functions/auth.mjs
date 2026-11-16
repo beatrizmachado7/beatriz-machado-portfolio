@@ -1,20 +1,21 @@
 // Contas de cliente: criar conta, confirmar por código, entrar, recuperar palavra-passe e "A minha conta".
 import {
   json, clean, sha, store, emailOk, phoneOk, userKey, ip, hashPw, checkPw, newCode,
-  createSession, sessionUser, publicUser, limited, notify, mailReady, sendMail, mailLayout, p, codeBox
+  createSession, sessionUser, publicUser, limited, notify, mailReady, sendMail, mailLayout, p, codeBox, getSignature, signatureText
 } from "../lib/common.mjs";
 
 const CODE_MIN = 15;
 
 async function sendCode(user, code, kind) {
   const reset = kind === "reset";
+  const sig = await getSignature(store());
   const subject = reset ? "Código para mudar a palavra-passe" : "Confirma a tua conta";
   const html = mailLayout(subject,
     p(`Olá ${user.nome.split(" ")[0]},`) +
     p(reset ? "Usa este código para escolheres uma nova palavra-passe:" : "Usa este código para confirmares a tua conta e enviares o teu pedido de orçamento:") +
     codeBox(code) +
-    p(`O código é válido durante ${CODE_MIN} minutos. Se não foste tu, podes ignorar este email.`));
-  const text = `${subject}\n\nCódigo: ${code}\n\nVálido durante ${CODE_MIN} minutos.`;
+    p(`O código é válido durante ${CODE_MIN} minutos. Se não foste tu, podes ignorar este email.`), sig);
+  const text = `${subject}\n\nCódigo: ${code}\n\nVálido durante ${CODE_MIN} minutos.` + signatureText(sig);
   return sendMail({ to: user.email, subject: `${code} · ${subject}`, html, text });
 }
 
