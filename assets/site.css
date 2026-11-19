@@ -79,3 +79,14 @@ h1.display,h2.display{font-size:clamp(36px,4.8vw,64px)!important}
 /* Uma só tipografia de títulos em todo o site: Outfit (diagnóstico 11/2026) */.x11-h1,.x11-t,.x11-steps h3,.x12-value-card h3{font-family:var(--x-serif)!important}.x11-h1,.x11-t{font-weight:400!important}.x11-steps h3,.x12-value-card h3{font-weight:600!important;letter-spacing:-.01em!important}.x-h3{font-weight:600!important}main .x-card h3,main [class*="plan"] h3{font-weight:600}
 .x11-h1{letter-spacing:-.03em!important}.x11-t{letter-spacing:-.025em!important}
 .x-h1{letter-spacing:-.03em!important}.x-h2{letter-spacing:-.025em!important}main h3{font-weight:600!important}
+/* Tráfego Pago (11/2026) */.x-tpg-from{margin:18px 0 0;font-size:14.5px;color:#e9d3d6}.x-tpg-from b{color:#fff;font-weight:600}
+/* Bordô escuro em todo o site (11/2026): sem secções claras e fundo uniforme */
+html body .page>section.x11-sec#servicos,html body .page>section.x11-sec#porque,html body .page>section.x11-sec#processo{background:transparent!important;background-image:none!important;color:#fff!important}
+main.pg-inicio :is(#servicos,#porque,#processo) :is(.x11-h,.x11-h2,.x11-t,.x11-steps h3,.x12-value-card h3,.x11-sn b,.x11-sp,.x11-ic){color:#fff!important}
+main.pg-inicio :is(#servicos,#porque,#processo) :is(.x11-h em,.x11-t em,.x11-sn2,.x11-sp small){color:#F0C2AE!important}
+main.pg-inicio :is(#servicos,#porque,#processo) :is(.x11-h p,.x11-s,.x11-sn span,.x11-steps p,.x12-value-card p){color:#e9d3d6!important}
+main.pg-inicio #servicos .x11-svc li{background:transparent!important;border:0!important}main.pg-inicio #porque .x12-value-card{background:rgba(255,255,255,.045)!important;border:1px solid rgba(240,194,174,.16)!important}
+main.pg-inicio #porque .x9-lk{color:#fff!important;border-color:#F0C2AE!important}
+main.pg-inicio #processo .x11-steps:before{background:#ffffff40!important}main.pg-inicio #processo .x11-steps i{background:#f0c2ae!important;box-shadow:0 0 0 6px #f0c2ae26!important}
+html:after{background:#be3c5426!important}body:before{background:radial-gradient(60% 50% at 50% -6%,rgba(240,194,174,.08),transparent 64%),#350E17!important}
+main.pg-inicio #servicos .x11-sb{color:#350E17!important}
