@@ -9,7 +9,8 @@ import { json, clean, sha, store, sessionUser, limited, notify, sendMail, mailLa
 const CATS = {
   "Websites": ["Landing Page", "Website Completo", "Loja Online", "Ainda não sei"],
   "Identidade Visual": ["Logótipo", "Identidade Visual Completa", "Rebranding", "Estacionário", "Ainda não sei"],
-  "Gestão de Redes Sociais": ["Essencial", "Growth", "Premium", "Crescimento"]
+  "Gestão de Redes Sociais": ["Essencial", "Growth", "Premium", "Crescimento"],
+  "Tráfego Pago": ["Impulso", "Expansão", "Escala", "Ainda não sei"]
 };
 const PLANS = ["Cuidado do Site"].concat(["Básico", "Pro", "Loja Online"].flatMap((n) => ["Manutenção " + n + " (mensal)", "Manutenção " + n + " (anual)"]));
 
